@@ -1,8 +1,81 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import DragDropBuilder from '@/components/admin/DragDropBuilder'
+import FullscreenGuard from '@/components/test/FullscreenGuard'
+import IELTSQuestionRenderer from '@/components/test/IELTSQuestionRenderer'
+
+// Dynamic imports to avoid SSR issues
+const DragDropBuilder = dynamic(() => import('@/components/admin/DragDropBuilder'), { ssr: false })
+const IELTSQuestionBuilder = dynamic(() => import('@/components/admin/IELTSQuestionBuilder'), { ssr: false })
+
+interface Question {
+  id: string
+  type: 'MCQ' | 'FIB' | 'MATCHING' | 'TRUE_FALSE' | 'NOT_GIVEN' | 'NOTES_COMPLETION' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE_NOT_GIVEN' | 'SUMMARY_COMPLETION'
+  content: string
+  options?: string[]
+  correctAnswer: string | string[] | Record<string, string>
+  points: number
+  part?: 1 | 2 | 3
+  fibData?: {
+    content: string
+    blanks: Array<{
+      id: string
+      position: number
+      correctAnswer: string
+      alternatives?: string[]
+      caseSensitive: boolean
+    }>
+    instructions: string
+  }
+  notesCompletionData?: {
+    title: string
+    instructions: string
+    notes: Array<{
+      id: string
+      content: string
+      hasBlank: boolean
+      blankAnswer?: string
+      blankPosition?: number
+    }>
+  }
+  summaryCompletionData?: {
+    title: string
+    instructions: string
+    content: string
+    blanks: Array<{
+      id: string
+      position: number
+      correctAnswer: string
+      alternatives?: string[]
+    }>
+  }
+  trueFalseNotGivenData?: {
+    statement: string
+    correctAnswer: 'TRUE' | 'FALSE' | 'NOT_GIVEN'
+    explanation?: string
+  }
+  matchingData?: {
+    leftItems: Array<{
+      id: string
+      label: string
+      content: string
+    }>
+    rightItems: Array<{
+      id: string
+      label: string
+      content: string
+    }>
+  }
+  instructions?: string
+}
+
+interface PartContent {
+  part1: string
+  part2: string
+  part3: string
+}
 
 interface MockTestData {
   title: string
@@ -12,7 +85,15 @@ interface MockTestData {
     duration: number
     audioUrl?: string
     instructions: string
-    questions: any[]
+    questions: Question[]
+    partContent?: PartContent
+    readingPassage?: {
+      title: string
+      content: Array<{
+        paragraph: string
+        text: string
+      }>
+    }
   }[]
 }
 
@@ -24,7 +105,18 @@ export default function CreateMockTest() {
     modules: []
   })
   const [loading, setLoading] = useState(false)
+  const [previewMode, setPreviewMode] = useState(false)
+  const [currentModule, setCurrentModule] = useState<'LISTENING' | 'READING' | 'WRITING' | 'SPEAKING'>('READING')
+  const [partContent, setPartContent] = useState<PartContent>({ part1: '', part2: '', part3: '' })
   const router = useRouter()
+
+  // Preview mode state
+  const [timeRemaining, setTimeRemaining] = useState(45 * 60)
+  const [currentPart, setCurrentPart] = useState(1)
+  const [previewCurrentPart, setPreviewCurrentPart] = useState(1)
+  const [currentQuestion, setCurrentQuestion] = useState(1)
+  const [answers, setAnswers] = useState<{ [key: number]: string }>({})
+  const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Set<number>>(new Set())
 
   const handleSave = async (isDraft = false) => {
     setLoading(true)
@@ -52,18 +144,459 @@ export default function CreateMockTest() {
     }
   }
 
+  const handleQuestionsChange = (moduleType: 'LISTENING' | 'READING' | 'WRITING' | 'SPEAKING', questions: Question[]) => {
+    setMockData(prev => ({
+      ...prev,
+      modules: [
+        ...prev.modules.filter(m => m.type !== moduleType),
+        {
+          type: moduleType,
+          duration: moduleType === 'LISTENING' ? 40 : moduleType === 'READING' ? 60 : moduleType === 'WRITING' ? 60 : 15,
+          instructions: getDefaultInstructions(moduleType),
+          questions,
+          partContent: moduleType === 'READING' ? partContent : undefined,
+        }
+      ]
+    }))
+  }
+
+  const handlePartContentChange = (content: PartContent) => {
+    setPartContent(content)
+    // Update the current module's part content
+    setMockData(prev => ({
+      ...prev,
+      modules: prev.modules.map(m => 
+        m.type === currentModule 
+          ? { ...m, partContent: content }
+          : m
+      )
+    }))
+  }
+
+  const getDefaultInstructions = (moduleType: string) => {
+    switch (moduleType) {
+      case 'LISTENING':
+        return 'You will hear a number of different recordings and you will have to answer questions on what you hear.'
+      case 'READING':
+        return 'You should spend about 20 minutes on each passage.'
+      case 'WRITING':
+        return 'You will be given two writing tasks to complete.'
+      case 'SPEAKING':
+        return 'You will have a conversation with an examiner about familiar topics.'
+      default:
+        return ''
+    }
+  }
+
   const steps = [
     { id: 1, name: 'Basic Info', description: 'Test title and description' },
     { id: 2, name: 'Listening', description: 'Listening module setup' },
     { id: 3, name: 'Reading', description: 'Reading module setup' },
-    { id: 4, name: 'Writing & Speaking', description: 'Writing and Speaking modules' },
   ]
+
+  // Preview mode functions
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
+
+  const handleAnswerChange = (questionId: number, value: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: value
+    }))
+  }
+
+  const toggleBookmark = (questionId: number) => {
+    setBookmarkedQuestions(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId)
+      } else {
+        newSet.add(questionId)
+      }
+      return newSet
+    })
+  }
+
+  const navigateToQuestion = (questionNumber: number) => {
+    setCurrentQuestion(questionNumber)
+  }
+
+  const navigateToPart = (partNumber: number) => {
+    setCurrentPart(partNumber)
+  }
+
+  // Timer effect for preview
+  useEffect(() => {
+    if (!previewMode) return
+    
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 0) {
+          clearInterval(timer)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [previewMode])
+
+  const getCurrentModule = () => {
+    return mockData.modules.find(m => m.type === currentModule)
+  }
+
+  const getReadingQuestions = () => {
+    const readingModule = mockData.modules.find(m => m.type === 'READING')
+    return readingModule?.questions || []
+  }
+
+  const getQuestionsForPart = (part: number) => {
+    const allQuestions = getReadingQuestions()
+    return allQuestions.filter(q => q.part === part)
+  }
+
+  const getTotalParts = () => {
+    const allQuestions = getReadingQuestions()
+    const parts = new Set(allQuestions.map(q => q.part || 1))
+    return Math.max(...parts, 1)
+  }
+
+  // Render preview mode
+  const renderPreviewMode = () => {
+    const readingModule = getCurrentModule()
+    if (!readingModule) return null
+
+    const currentPartQuestions = getQuestionsForPart(previewCurrentPart)
+    const totalParts = getTotalParts()
+
+    return (
+      <FullscreenGuard>
+        <div className="h-screen flex flex-col bg-white">
+          {/* Header */}
+          <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">IELTS</span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Rem Candidate - 278228</span>
+                  <span className="ml-2">{formatTime(timeRemaining)} remaining</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={() => setPreviewMode(false)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Exit Preview
+              </button>
+            </div>
+          </header>
+
+          {/* Main Content - Split Pane Layout */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Pane - Reading Text */}
+            <div className="w-1/2 border-r border-gray-200 flex flex-col">
+              <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                <div className="text-sm font-medium text-gray-700">
+                  <span className="font-bold">Part {previewCurrentPart}</span> Reading Passage
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {/* Passage Instructions */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-sm font-bold text-blue-900 mb-2">Instructions</h3>
+                  <div className="text-sm text-blue-800 space-y-2">
+                    <p>• Read the passage below carefully</p>
+                    <p>• Answer the questions on the right based on the information in the passage</p>
+                    <p>• You can refer back to the passage while answering questions</p>
+                    <p>• Choose the best answer for each question</p>
+                    {previewCurrentPart === 1 && (
+                      <p>• This is Part 1 - typically contains factual information and details</p>
+                    )}
+                    {previewCurrentPart === 2 && (
+                      <p>• This is Part 2 - usually contains descriptive or explanatory text</p>
+                    )}
+                    {previewCurrentPart === 3 && (
+                      <p>• This is Part 3 - often contains more complex, analytical content</p>
+                    )}
+                  </div>
+                </div>
+
+                {readingModule.partContent ? (
+                  <div className="space-y-4">
+                    {(() => {
+                      const partKey = `part${previewCurrentPart}` as keyof PartContent
+                      const currentPartContent = readingModule.partContent[partKey]
+                      
+                      if (currentPartContent) {
+                        return (
+                          <div className="mb-6">
+                            <h3 className="text-lg font-bold mb-4">Reading Passage</h3>
+                            <div className="bg-white border border-gray-200 rounded-lg p-6">
+                              <div 
+                                className="text-justify leading-relaxed"
+                                style={{
+                                  lineHeight: '1.6',
+                                  fontSize: '14px',
+                                  fontFamily: 'system-ui, -apple-system, sans-serif'
+                                }}
+                                dangerouslySetInnerHTML={{ 
+                                  __html: currentPartContent
+                                    // Ensure proper paragraph formatting with spacing
+                                    .replace(/<p>/g, '<p class="mb-4" style="margin-bottom: 1rem;">')
+                                    // Format paragraph labels (A., B., C., etc.) with proper styling
+                                    .replace(/<p[^>]*><strong>([A-Z])\.<\/strong>/g, '<p class="mb-4" style="margin-bottom: 1rem;"><strong style="font-weight: bold; color: #111827;">$1.</strong>')
+                                    // Ensure text is properly formatted
+                                    .replace(/<p[^>]*>([^<]*[A-Z]\.)/g, '<p class="mb-4" style="margin-bottom: 1rem;"><strong style="font-weight: bold; color: #111827;">$1</strong>')
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      } else {
+                        return (
+                          <div className="flex items-center justify-center h-full">
+                            <div className="text-center">
+                              <div className="text-gray-500 text-lg mb-2">No Content</div>
+                              <div className="text-gray-400 text-sm">
+                                No content has been added for Part {previewCurrentPart} yet
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+                    })()}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-gray-500 text-lg mb-2">No Content</div>
+                      <div className="text-gray-400 text-sm">
+                        No reading content has been added yet
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Pane - Answer Sheet for Current Part */}
+            <div className="w-1/2 flex flex-col">
+              <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-gray-700">
+                      Part {previewCurrentPart} - Answer Sheet
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Questions 1-{currentPartQuestions.length}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setPreviewCurrentPart(Math.max(1, previewCurrentPart - 1))}
+                      disabled={previewCurrentPart <= 1}
+                      className="px-2 py-1 text-xs bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+                    >
+                      ← Prev
+                    </button>
+                    <span className="text-xs text-gray-600">
+                      {previewCurrentPart} of {totalParts}
+                    </span>
+                    <button
+                      onClick={() => setPreviewCurrentPart(Math.min(totalParts, previewCurrentPart + 1))}
+                      disabled={previewCurrentPart >= totalParts}
+                      className="px-2 py-1 text-xs bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {currentPartQuestions.length > 0 ? (
+                  <div className="space-y-6">
+                    {currentPartQuestions.map((question, index) => (
+                    <div key={question.id} className="relative">
+                      <IELTSQuestionRenderer
+                        question={{
+                          ...question,
+                          id: question.id,
+                          type: question.type as any,
+                          content: question.content,
+                          options: question.options,
+                          correctAnswer: question.correctAnswer,
+                          points: question.points,
+                          part: question.part || 1,
+                          fibData: question.fibData,
+                          matchingData: question.matchingData,
+                          notesCompletionData: question.notesCompletionData,
+                          summaryCompletionData: question.summaryCompletionData,
+                          trueFalseNotGivenData: question.trueFalseNotGivenData,
+                          instructions: question.instructions
+                        }}
+                        questionNumber={index + 1}
+                        onAnswerChange={(questionId, answer) => {
+                          console.log('Preview answer change:', { questionId, answer })
+                          handleAnswerChange(index + 1, typeof answer === 'string' ? answer : JSON.stringify(answer))
+                        }}
+                        initialAnswer={answers[index + 1] || ''}
+                        disabled={false}
+                        showInstructions={false}
+                      />
+                      <button
+                        onClick={() => toggleBookmark(index + 1)}
+                        className="absolute top-2 right-2 p-1 hover:bg-gray-100 rounded"
+                      >
+                        <svg className={`w-4 h-4 ${bookmarkedQuestions.has(index + 1) ? 'text-yellow-500 fill-current' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                      </button>
+                    </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-gray-500 text-lg mb-2">No Questions</div>
+                      <div className="text-gray-400 text-sm">
+                        No questions found for Part {previewCurrentPart}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Navigation */}
+          <footer className="border-t border-gray-200 bg-white px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-sm">Part {previewCurrentPart}</span>
+                  <span className="text-xs text-gray-500">
+                    ({currentPartQuestions.length} questions)
+                  </span>
+                  {currentPartQuestions.length > 0 && (
+                    <div className="flex space-x-1">
+                      {Array.from({ length: currentPartQuestions.length }, (_, i) => i + 1).map((num) => (
+                        <button
+                          key={num}
+                          onClick={() => setCurrentQuestion(num)}
+                          className={`w-8 h-8 text-sm rounded ${
+                            num === currentQuestion 
+                              ? 'bg-blue-200 text-blue-900 border border-blue-300' 
+                              : 'text-gray-600 hover:bg-gray-100 border border-gray-200'
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-4">
+                  {Array.from({ length: totalParts }, (_, i) => i + 1).map((partNum) => {
+                    const partQuestions = getQuestionsForPart(partNum)
+                    return (
+                      <div key={partNum} className="text-sm">
+                        <span className={`font-medium ${partNum === previewCurrentPart ? 'text-blue-600' : 'text-gray-600'}`}>
+                          Part {partNum}
+                        </span> 
+                        <span className="text-gray-500">
+                          {partQuestions.length} question{partQuestions.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="text-sm text-gray-600">
+                    {formatTime(timeRemaining)}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    remaining
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setPreviewCurrentPart(Math.max(1, previewCurrentPart - 1))}
+                    disabled={previewCurrentPart <= 1}
+                    className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Previous Part"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <span className="text-xs text-gray-500">
+                    {previewCurrentPart} of {totalParts}
+                  </span>
+                  <button
+                    onClick={() => setPreviewCurrentPart(Math.min(totalParts, previewCurrentPart + 1))}
+                    disabled={previewCurrentPart >= totalParts}
+                    className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Next Part"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+                <button 
+                  onClick={() => setPreviewMode(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                >
+                  Exit Preview
+                </button>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </FullscreenGuard>
+    )
+  }
+
+  if (previewMode) {
+    return renderPreviewMode()
+  }
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Create Mock Test</h1>
-        <p className="mt-2 text-gray-600">Build a comprehensive IELTS mock test</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Create Mock Test</h1>
+            <p className="mt-2 text-gray-600">Build a comprehensive IELTS mock test</p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setPreviewMode(true)}
+              disabled={!mockData.title || mockData.modules.length === 0}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Preview Test
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Progress Steps */}
@@ -149,108 +682,39 @@ export default function CreateMockTest() {
           {currentStep === 2 && (
             <DragDropBuilder
               moduleType="LISTENING"
-              onQuestionsChange={(questions) => {
-                setMockData({
-                  ...mockData,
-                  modules: [
-                    ...mockData.modules.filter(m => m.type !== 'LISTENING'),
-                    {
-                      type: 'LISTENING',
-                      duration: 40,
-                      instructions: 'You will hear a number of different recordings and you will have to answer questions on what you hear.',
-                      questions
-                    }
-                  ]
-                })
-              }}
+              onQuestionsChange={(questions) => handleQuestionsChange('LISTENING', questions as any)}
+              initialQuestions={mockData.modules.find(m => m.type === 'LISTENING')?.questions || []}
             />
           )}
 
           {currentStep === 3 && (
-            <DragDropBuilder
-              moduleType="READING"
-              onQuestionsChange={(questions) => {
-                setMockData({
-                  ...mockData,
-                  modules: [
-                    ...mockData.modules.filter(m => m.type !== 'READING'),
-                    {
-                      type: 'READING',
-                      duration: 60,
-                      instructions: 'You should spend about 20 minutes on each passage.',
-                      questions
-                    }
-                  ]
-                })
-              }}
-            />
-          )}
-
-          {currentStep === 4 && (
             <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Writing Module</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Task 1 Instructions
-                    </label>
-                    <textarea
-                      rows={3}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="Describe the information shown in the chart/graph..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Task 2 Instructions
-                    </label>
-                    <textarea
-                      rows={3}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="Write an essay discussing both views..."
-                    />
-                  </div>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Reading Module - IELTS Format</h3>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setCurrentModule('READING')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium ${
+                      currentModule === 'READING' 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    IELTS Reading Questions
+                  </button>
                 </div>
               </div>
-
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Speaking Module</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Part 1 Questions
-                    </label>
-                    <textarea
-                      rows={2}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="What is your hometown like? Do you like it?"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Part 2 Cue Card
-                    </label>
-                    <textarea
-                      rows={3}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="Describe a memorable journey you have taken..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Part 3 Discussion
-                    </label>
-                    <textarea
-                      rows={2}
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="How has travel changed in your country over the past 20 years?"
-                    />
-                  </div>
-                </div>
-              </div>
+              
+              <IELTSQuestionBuilder
+                moduleType="READING"
+                onQuestionsChange={(questions) => handleQuestionsChange('READING', questions as any)}
+                onPartContentChange={handlePartContentChange}
+                initialQuestions={mockData.modules.find(m => m.type === 'READING')?.questions || []}
+                initialPartContent={mockData.modules.find(m => m.type === 'READING')?.partContent || { part1: '', part2: '', part3: '' }}
+              />
             </div>
           )}
+
 
           {/* Navigation Buttons */}
           <div className="flex justify-between pt-6">
@@ -273,10 +737,10 @@ export default function CreateMockTest() {
                 Save Draft
               </button>
 
-              {currentStep < 4 ? (
+              {currentStep < 3 ? (
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(Math.min(4, currentStep + 1))}
+                  onClick={() => setCurrentStep(Math.min(3, currentStep + 1))}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Next

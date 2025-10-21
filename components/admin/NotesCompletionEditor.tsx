@@ -1,0 +1,193 @@
+'use client'
+
+import { useState } from 'react'
+
+interface NotesItem {
+  id: string
+  content: string
+  hasBlank: boolean
+  blankAnswer?: string
+  blankPosition?: number
+}
+
+interface NotesCompletionData {
+  title: string
+  instructions: string
+  notes: NotesItem[]
+}
+
+interface NotesCompletionEditorProps {
+  data: NotesCompletionData
+  onChange: (data: NotesCompletionData) => void
+}
+
+export default function NotesCompletionEditor({ data, onChange }: NotesCompletionEditorProps) {
+  const [localData, setLocalData] = useState<NotesCompletionData>(data)
+
+  const updateData = (updates: Partial<NotesCompletionData>) => {
+    const newData = { ...localData, ...updates }
+    setLocalData(newData)
+    onChange(newData)
+  }
+
+  const addNoteItem = () => {
+    const newItem: NotesItem = {
+      id: `note-${Date.now()}`,
+      content: '',
+      hasBlank: false
+    }
+    updateData({
+      notes: [...localData.notes, newItem]
+    })
+  }
+
+  const updateNoteItem = (id: string, updates: Partial<NotesItem>) => {
+    const updatedNotes = localData.notes.map(note => 
+      note.id === id ? { ...note, ...updates } : note
+    )
+    updateData({ notes: updatedNotes })
+  }
+
+  const deleteNoteItem = (id: string) => {
+    const updatedNotes = localData.notes.filter(note => note.id !== id)
+    updateData({ notes: updatedNotes })
+  }
+
+  const toggleBlank = (id: string) => {
+    const note = localData.notes.find(n => n.id === id)
+    if (note) {
+      updateNoteItem(id, { 
+        hasBlank: !note.hasBlank,
+        blankAnswer: !note.hasBlank ? '' : undefined,
+        blankPosition: !note.hasBlank ? 0 : undefined
+      })
+    }
+  }
+
+  const insertBlank = (noteId: string, position: number) => {
+    const note = localData.notes.find(n => n.id === noteId)
+    if (note) {
+      updateNoteItem(noteId, {
+        hasBlank: true,
+        blankPosition: position,
+        blankAnswer: ''
+      })
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Notes Title
+        </label>
+        <input
+          type="text"
+          className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          value={localData.title}
+          onChange={(e) => updateData({ title: e.target.value })}
+          placeholder="e.g., GERALD LAWSON, THE VIDEO GAME PIONEER"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Instructions
+        </label>
+        <textarea
+          rows={2}
+          className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          value={localData.instructions}
+          onChange={(e) => updateData({ instructions: e.target.value })}
+          placeholder="e.g., Complete the notes. Write ONE WORD ONLY from the text in each gap."
+        />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <label className="block text-sm font-medium text-gray-700">
+            Notes Items
+          </label>
+          <button
+            type="button"
+            onClick={addNoteItem}
+            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200"
+          >
+            <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add Note
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {localData.notes.map((note, index) => (
+            <div key={note.id} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-start justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Note {index + 1}
+                </span>
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleBlank(note.id)}
+                    className={`px-2 py-1 text-xs rounded ${
+                      note.hasBlank 
+                        ? 'bg-green-100 text-green-700' 
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {note.hasBlank ? 'Has Blank' : 'Add Blank'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteNoteItem(note.id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <textarea
+                  rows={2}
+                  className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  value={note.content}
+                  onChange={(e) => updateNoteItem(note.id, { content: e.target.value })}
+                  placeholder="Enter note content..."
+                />
+
+                {note.hasBlank && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className="text-sm font-medium text-yellow-800">Blank Answer:</span>
+                      <input
+                        type="text"
+                        className="flex-1 border-yellow-300 rounded-md shadow-sm focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
+                        value={note.blankAnswer || ''}
+                        onChange={(e) => updateNoteItem(note.id, { blankAnswer: e.target.value })}
+                        placeholder="Correct answer for this blank"
+                      />
+                    </div>
+                    <p className="text-xs text-yellow-700">
+                      The blank will be inserted at the end of the note content. Students will see: "{note.content} [blank]"
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {localData.notes.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          <p>No notes added yet. Click "Add Note" to get started.</p>
+        </div>
+      )}
+    </div>
+  )
+}

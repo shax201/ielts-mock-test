@@ -20,10 +20,8 @@ export default function FullscreenGuard({ children }: FullscreenGuardProps) {
       }
     } catch (_err) {
       // Ignored: browsers may block without user gesture
-    } finally {
-      updateFullscreenState()
     }
-  }, [updateFullscreenState])
+  }, [])
 
   useEffect(() => {
     updateFullscreenState()
@@ -49,9 +47,9 @@ export default function FullscreenGuard({ children }: FullscreenGuardProps) {
       {!isFullscreen && (
         <div className="fixed inset-0 z-[9999] bg-white/95 backdrop-blur-sm flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-white border border-gray-200 shadow-xl rounded-lg p-6 text-center">
-            <h2 className="text-2xl font-bold text-gray-900">Enter Fullscreen to Continue</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Fullscreen Required</h2>
             <p className="mt-3 text-gray-600">
-              For a distraction-free, secure testing experience, the test runs in fullscreen.
+              For a distraction-free, secure testing experience, please enter fullscreen mode to continue with the test.
             </p>
             <div className="mt-6 space-y-3">
               <button
@@ -61,7 +59,7 @@ export default function FullscreenGuard({ children }: FullscreenGuardProps) {
                 Enter Fullscreen
               </button>
               <p className="text-sm text-gray-500">
-                Tip: You can also press <span className="font-medium">F11</span> to toggle fullscreen.
+                You can press <span className="font-medium">F11</span> or use the browser's fullscreen option.
               </p>
             </div>
           </div>
