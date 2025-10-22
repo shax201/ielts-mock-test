@@ -2,57 +2,77 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import FullscreenGuard from '@/components/test/FullscreenGuard'
 import Timer from '@/components/test/Timer'
 
-interface SpeakingQuestion {
+interface SpeakingPart {
   id: string
-  part: number
-  question: string
-  response: string
-  timeLimit?: number
+  partNumber: 1 | 2 | 3
+  title: string
+  instructions: string
+  timeLimit: number // in minutes
+  content: string
+  questions?: string[]
+  topicCard?: {
+    title: string
+    bulletPoints: string[]
+  }
+}
+
+interface SpeakingData {
+  module: {
+    id: string
+    type: string
+    duration: number
+    instructions: string | null
+  }
+  parts: SpeakingPart[]
+  assignment: {
+    id: string
+    candidateNumber: string
+    studentName: string
+    mockTitle: string
+  }
 }
 
 export default function SpeakingModule({ params }: { params: Promise<{ token: string }> }) {
-  const [questions, setQuestions] = useState<SpeakingQuestion[]>([
-    {
-      id: 'part1-1',
-      part: 1,
-      question: 'What is your hometown like? Do you like it?',
-      response: '',
-      timeLimit: 2
-    },
-    {
-      id: 'part1-2',
-      part: 1,
-      question: 'What do you like to do in your free time?',
-      response: '',
-      timeLimit: 2
-    },
-    {
-      id: 'part2',
-      part: 2,
-      question: 'Describe a memorable journey you have taken. You should say: where you went, who you went with, what you did there, and explain why this journey was memorable.',
-      response: '',
-      timeLimit: 4
-    },
-    {
-      id: 'part3-1',
-      part: 3,
-      question: 'How has travel changed in your country over the past 20 years?',
-      response: '',
-      timeLimit: 3
-    },
-    {
-      id: 'part3-2',
-      part: 3,
-      question: 'What are the benefits of traveling to different countries?',
-      response: '',
-      timeLimit: 3
-    }
-  ])
-  const [timeRemaining, setTimeRemaining] = useState(15 * 60) // 15 minutes
+  const [speakingData, setSpeakingData] = useState<SpeakingData | null>(null)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [timeRemaining, setTimeRemaining] = useState(15 * 60) // 15 minutes in seconds
+  const [loading, setLoading] = useState(true)
   const [submitted, setSubmitted] = useState(false)
+  const [currentPart, setCurrentPart] = useState<1 | 2 | 3>(1)
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const router = useRouter()
+
+  useEffect(() => {
+    const fetchTestData = async () => {
+      try {
+        const resolvedParams = await params
+        const response = await fetch(`/api/student/test-data?token=${encodeURIComponent(resolvedParams.token)}&module=SPEAKING`)
+        const data = await response.json()
+
+        if (response.ok) {
+          setSpeakingData(data)
+          setTimeRemaining(data.module.duration * 60) // Convert minutes to seconds
+          // Initialize answers with empty strings
+          const initialAnswers: Record<string, string> = {}
+          data.parts.forEach((part: SpeakingPart) => {
+            initialAnswers[part.id] = part.content || ''
+          })
+          setAnswers(initialAnswers)
+        } else {
+          console.error('Failed to fetch test data:', data.error)
+        }
+      } catch (error) {
+        console.error('Error fetching test data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTestData()
+  }, [params])
 
   useEffect(() => {
     if (timeRemaining <= 0 && !submitted) {
@@ -60,10 +80,41 @@ export default function SpeakingModule({ params }: { params: Promise<{ token: st
     }
   }, [timeRemaining, submitted])
 
-  const handleResponseChange = (questionId: string, response: string) => {
-    setQuestions(prev => prev.map(q => 
-      q.id === questionId ? { ...q, response } : q
-    ))
+  // Auto-save functionality
+  useEffect(() => {
+    const autoSave = async () => {
+      if (submitted || !speakingData) return
+      
+      setAutoSaveStatus('saving')
+      try {
+        const resolvedParams = await params
+        await fetch(`/api/student/submissions/speaking/autosave`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token: resolvedParams.token,
+            answers,
+            currentPart
+          }),
+        })
+        setAutoSaveStatus('saved')
+      } catch (error) {
+        setAutoSaveStatus('error')
+        console.error('Auto-save failed:', error)
+      }
+    }
+
+    const interval = setInterval(autoSave, 30000) // Auto-save every 30 seconds
+    return () => clearInterval(interval)
+  }, [answers, currentPart, submitted, speakingData, params])
+
+  const handleAnswerChange = (partId: string, content: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      [partId]: content
+    }))
   }
 
   const handleSubmit = async () => {
@@ -72,20 +123,20 @@ export default function SpeakingModule({ params }: { params: Promise<{ token: st
     setSubmitted(true)
     
     try {
+      const resolvedParams = await params
       const response = await fetch(`/api/student/submissions/speaking/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          token: (await params).token,
-          questions,
+          token: resolvedParams.token,
+          answers,
           timeSpent: 15 * 60 - timeRemaining
         }),
       })
 
       if (response.ok) {
-        const resolvedParams = await params;
         router.push(`/test/${resolvedParams.token}/complete`)
       } else {
         console.error('Failed to submit speaking answers')
@@ -95,25 +146,33 @@ export default function SpeakingModule({ params }: { params: Promise<{ token: st
     }
   }
 
-  const getPartTitle = (part: number) => {
-    switch (part) {
-      case 1: return 'Part 1: Introduction and Interview'
-      case 2: return 'Part 2: Individual Long Turn'
-      case 3: return 'Part 3: Two-way Discussion'
-      default: return `Part ${part}`
-    }
+  const getCurrentPart = () => {
+    return speakingData?.parts.find(part => part.partNumber === currentPart)
   }
 
-  const getPartDescription = (part: number) => {
-    switch (part) {
-      case 1: return 'Answer questions about yourself and familiar topics (4-5 minutes)'
-      case 2: return 'Speak for 1-2 minutes on a given topic (3-4 minutes)'
-      case 3: return 'Discuss abstract topics related to Part 2 (4-5 minutes)'
-      default: return ''
-    }
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
+
+  if (!speakingData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">Error Loading Test</h2>
+          <p className="mt-2 text-gray-600">Please try again later.</p>
+        </div>
+      </div>
+    )
+  }
+
+  const currentPartData = getCurrentPart()
 
   return (
+    <FullscreenGuard>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
@@ -123,86 +182,142 @@ export default function SpeakingModule({ params }: { params: Promise<{ token: st
               <h1 className="text-2xl font-bold text-gray-900">Speaking Module</h1>
               <p className="text-gray-600">Time: 15 minutes</p>
             </div>
-            <Timer 
-              timeRemaining={timeRemaining}
-              onTimeUp={() => handleSubmit()}
-            />
+            <div className="flex items-center space-x-4">
+              <Timer 
+                timeRemaining={timeRemaining}
+                onTimeUp={() => handleSubmit()}
+              />
+              <div className="text-sm text-gray-500">
+                {autoSaveStatus === 'saved' && '✓ Saved'}
+                {autoSaveStatus === 'saving' && 'Saving...'}
+                {autoSaveStatus === 'error' && '⚠ Save Error'}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Instructions */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-          <h2 className="text-lg font-semibold text-blue-900 mb-2">Speaking Test Instructions</h2>
-          <p className="text-blue-800 mb-4">
-            In this section, you will type your responses to speaking questions instead of speaking aloud. 
-            This simulates the speaking test format.
-          </p>
-          <ul className="list-disc list-inside text-blue-800 space-y-1">
-            <li>Part 1: Answer questions about yourself and familiar topics</li>
-            <li>Part 2: Describe a topic in detail for 1-2 minutes</li>
-            <li>Part 3: Discuss abstract topics related to Part 2</li>
-          </ul>
+      <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Part Navigation */}
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <div className="flex space-x-4">
+            {speakingData.parts.map((part) => (
+              <button
+                key={part.id}
+                onClick={() => setCurrentPart(part.partNumber)}
+                className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                  currentPart === part.partNumber
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Part {part.partNumber}
+                {part.partNumber === 1 && ' (4-5 min)'}
+                {part.partNumber === 2 && ' (3-4 min)'}
+                {part.partNumber === 3 && ' (4-5 min)'}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Questions */}
-        <div className="space-y-8">
-          {questions.map((question, index) => (
-            <div key={question.id} className="bg-white shadow rounded-lg p-6">
-              <div className="mb-4">
-                <div className="flex items-center space-x-3 mb-2">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    {getPartTitle(question.part)}
-                  </span>
-                  {question.timeLimit && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      {question.timeLimit} min
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-600">{getPartDescription(question.part)}</p>
-              </div>
+        {/* Current Part */}
+        {currentPartData && (
+          <div className="bg-white shadow rounded-lg p-6 mb-8">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                Part {currentPartData.partNumber}
+              </h2>
+              <p className="text-gray-600 mb-4">
+                {currentPartData.timeLimit} minutes recommended
+              </p>
+            </div>
 
-              <div className="mb-4">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">
-                  Question {index + 1}
-                </h3>
-                <p className="text-gray-700 mb-4">{question.question}</p>
-              </div>
-
-              <div>
-                <label htmlFor={`response-${question.id}`} className="block text-sm font-medium text-gray-700 mb-2">
-                  Your Response
-                </label>
-                <textarea
-                  id={`response-${question.id}`}
-                  rows={6}
-                  value={question.response}
-                  onChange={(e) => handleResponseChange(question.id, e.target.value)}
-                  placeholder="Type your response here..."
-                  className="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  disabled={submitted}
-                />
-                <p className="mt-2 text-sm text-gray-500">
-                  {question.response.length} characters
+            <div className="mb-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {currentPartData.title}
+              </h3>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="text-gray-800 whitespace-pre-wrap">
+                  {currentPartData.instructions}
                 </p>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Topic Card for Part 2 */}
+            {currentPartData.partNumber === 2 && currentPartData.topicCard && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+                <h4 className="text-lg font-semibold text-yellow-900 mb-4">
+                  Topic Card
+                </h4>
+                <h5 className="text-md font-medium text-yellow-800 mb-3">
+                  {currentPartData.topicCard.title}
+                </h5>
+                <ul className="list-disc list-inside text-yellow-800 space-y-1">
+                  {currentPartData.topicCard.bulletPoints.map((point, index) => (
+                    <li key={index}>{point}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Questions for Part 1 and 3 */}
+            {(currentPartData.partNumber === 1 || currentPartData.partNumber === 3) && currentPartData.questions && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h4 className="text-lg font-semibold text-blue-900 mb-4">
+                  Questions
+                </h4>
+                <ul className="space-y-2">
+                  {currentPartData.questions.map((question, index) => (
+                    <li key={index} className="text-blue-800">
+                      {index + 1}. {question}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <label htmlFor={`part-${currentPartData.id}`} className="block text-sm font-medium text-gray-700">
+                Your Response (Type your answers as if you were speaking)
+              </label>
+              <textarea
+                id={`part-${currentPartData.id}`}
+                value={answers[currentPartData.id] || ''}
+                onChange={(e) => handleAnswerChange(currentPartData.id, e.target.value)}
+                disabled={submitted}
+                className="w-full h-64 p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none"
+                placeholder="Type your response here as if you were speaking..."
+              />
+              
+              <div className="flex justify-between items-center text-sm text-gray-500">
+                <div>
+                  Part {currentPartData.partNumber} response
+                </div>
+                <div>
+                  Auto-saves every 30 seconds
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Submit Button */}
-        <div className="mt-8 flex justify-end">
-          <button
-            onClick={handleSubmit}
-            disabled={submitted}
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {submitted ? 'Submitting...' : 'Complete Test'}
-          </button>
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              Make sure you have completed all three parts before submitting
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={submitted}
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitted ? 'Submitting...' : 'Submit & Complete Test'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
+    </FullscreenGuard>
   )
 }

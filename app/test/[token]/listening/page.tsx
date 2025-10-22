@@ -2,73 +2,149 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import AudioPlayer from '@/components/test/AudioPlayer'
 import FullscreenGuard from '@/components/test/FullscreenGuard'
 import Timer from '@/components/test/Timer'
+import AudioPlayer from '@/components/test/AudioPlayer'
+import IELTSQuestionRenderer from '@/components/test/IELTSQuestionRenderer'
 
 interface Question {
   id: string
-  type: 'MCQ' | 'FIB' | 'MATCHING' | 'TRUE_FALSE' | 'NOT_GIVEN'
+  type: 'MCQ' | 'FIB' | 'MATCHING' | 'TRUE_FALSE' | 'NOT_GIVEN' | 'NOTES_COMPLETION' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE_NOT_GIVEN' | 'SUMMARY_COMPLETION'
   content: string
   options?: string[]
-  correctAnswer: string | string[]
+  part?: 1 | 2 | 3
+  fibData?: {
+    content: string
+    blanks: Array<{
+      id: string
+      position: number
+      correctAnswer: string
+      alternatives?: string[]
+      caseSensitive: boolean
+    }>
+    instructions: string
+  }
+  matchingData?: {
+    leftItems: Array<{
+      id: string
+      label: string
+      content: string
+    }>
+    rightItems: Array<{
+      id: string
+      label: string
+      content: string
+    }>
+  }
+  notesCompletionData?: {
+    title: string
+    instructions: string
+    notes: Array<{
+      id: string
+      content: string
+      hasBlank: boolean
+      blankAnswer?: string
+      blankPosition?: number
+    }>
+  }
+  summaryCompletionData?: {
+    title: string
+    instructions: string
+    content: string
+    blanks: Array<{
+      id: string
+      position: number
+      correctAnswer: string
+      alternatives?: string[]
+    }>
+  }
+  trueFalseNotGivenData?: {
+    statement: string
+    correctAnswer: 'TRUE' | 'FALSE' | 'NOT_GIVEN'
+    explanation?: string
+  }
+  instructions?: string
+  correctAnswer: string | string[] | Record<string, string>
   points: number
 }
 
 interface ListeningData {
+  module: {
+    id: string
+    type: string
+    duration: number
+    instructions: string | null
+    audioUrl?: string
+  }
   questions: Question[]
-  audioUrl: string
-  instructions: string
+  assignment: {
+    id: string
+    candidateNumber: string
+    studentName: string
+    mockTitle: string
+  }
 }
 
 export default function ListeningModule({ params }: { params: Promise<{ token: string }> }) {
   const [listeningData, setListeningData] = useState<ListeningData | null>(null)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [answers, setAnswers] = useState<Record<string, string | Record<string, string>>>({})
   const [timeRemaining, setTimeRemaining] = useState(40 * 60) // 40 minutes in seconds
   const [loading, setLoading] = useState(true)
   const [submitted, setSubmitted] = useState(false)
+  const [audioFinished, setAudioFinished] = useState(false)
+  const [transferTime, setTransferTime] = useState(10 * 60) // 10 minutes transfer time
+  const [inTransferMode, setInTransferMode] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
-    // TODO: Fetch listening module data from API
-    // For now, using mock data
-    setTimeout(() => {
-      setListeningData({
-        questions: [
-          {
-            id: 'q1',
-            type: 'MCQ',
-            content: 'What is the main topic of the conversation?',
-            options: ['A) Weather', 'B) Travel', 'C) Food', 'D) Sports'],
-            correctAnswer: 'B',
-            points: 1
-          },
-          {
-            id: 'q2',
-            type: 'FIB',
-            content: 'The speaker mentions that the journey takes approximately _____ hours.',
-            correctAnswer: 'three',
-            points: 1
-          }
-        ],
-        audioUrl: '/demo-audio.mp3',
-        instructions: 'You will hear a conversation between two people. Answer the questions based on what you hear.'
-      })
-      setLoading(false)
-    }, 1000)
-  }, [])
+    const fetchTestData = async () => {
+      try {
+        const resolvedParams = await params
+        const response = await fetch(`/api/student/test-data?token=${encodeURIComponent(resolvedParams.token)}&module=LISTENING`)
+        const data = await response.json()
+
+        if (response.ok) {
+          setListeningData(data)
+          setTimeRemaining(data.module.duration * 60) // Convert minutes to seconds
+        } else {
+          console.error('Failed to fetch test data:', data.error)
+        }
+      } catch (error) {
+        console.error('Error fetching test data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchTestData()
+  }, [params])
 
   useEffect(() => {
-    if (timeRemaining <= 0 && !submitted) {
+    if (timeRemaining <= 0 && !submitted && !inTransferMode) {
+      // Start transfer time
+      setInTransferMode(true)
+      setTransferTime(10 * 60) // 10 minutes for transfer
+    }
+  }, [timeRemaining, submitted, inTransferMode])
+
+  useEffect(() => {
+    if (inTransferMode && transferTime <= 0 && !submitted) {
       handleSubmit()
     }
-  }, [timeRemaining, submitted])
+  }, [transferTime, inTransferMode, submitted])
 
-  const handleAnswerChange = (questionId: string, answer: string) => {
+  const handleAnswerChange = (questionId: string, answer: string | Record<string, string>) => {
     setAnswers(prev => ({
       ...prev,
       [questionId]: answer
     }))
+  }
+
+  const handleAudioFinished = () => {
+    setAudioFinished(true)
+    // Start transfer time after audio finishes
+    setInTransferMode(true)
+    setTransferTime(10 * 60)
   }
 
   const handleSubmit = async () => {
@@ -77,20 +153,20 @@ export default function ListeningModule({ params }: { params: Promise<{ token: s
     setSubmitted(true)
     
     try {
+      const resolvedParams = await params
       const response = await fetch(`/api/student/submissions/listening/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          token: (await params).token,
+          token: resolvedParams.token,
           answers,
-          timeSpent: 40 * 60 - timeRemaining
+          timeSpent: 40 * 60 - timeRemaining + (10 * 60 - transferTime)
         }),
       })
 
       if (response.ok) {
-        const resolvedParams = await params;
         router.push(`/test/${resolvedParams.token}/reading`)
       } else {
         console.error('Failed to submit listening answers')
@@ -128,10 +204,12 @@ export default function ListeningModule({ params }: { params: Promise<{ token: s
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Listening Module</h1>
-              <p className="text-gray-600">Time: 40 minutes</p>
+              <p className="text-gray-600">
+                {inTransferMode ? 'Transfer Time: 10 minutes' : 'Time: 40 minutes'}
+              </p>
             </div>
             <Timer 
-              timeRemaining={timeRemaining}
+              timeRemaining={inTransferMode ? transferTime : timeRemaining}
               onTimeUp={() => handleSubmit()}
             />
           </div>
@@ -142,73 +220,98 @@ export default function ListeningModule({ params }: { params: Promise<{ token: s
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
           <h2 className="text-lg font-semibold text-blue-900 mb-2">Instructions</h2>
-          <p className="text-blue-800">{listeningData.instructions}</p>
+          <p className="text-blue-800">
+            {listeningData.module.instructions || 
+             'You will hear a number of different recordings. You will have to answer questions on what you hear. The audio will play automatically and cannot be paused or replayed. You will have 10 minutes at the end to transfer your answers.'}
+          </p>
         </div>
 
         {/* Audio Player */}
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Audio</h2>
-          <AudioPlayer 
-            src={listeningData.audioUrl}
-            onEnded={() => {
-              // Audio finished, continue with questions
-            }}
-          />
-        </div>
+        {!audioFinished && !inTransferMode && (
+          <div className="bg-white shadow rounded-lg p-6 mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Audio Recording</h2>
+            <AudioPlayer 
+              src={listeningData.module.audioUrl || '/demo-audio.mp3'}
+              onEnded={handleAudioFinished}
+              autoPlay={true}
+            />
+          </div>
+        )}
+
+        {/* Transfer Mode Notice */}
+        {inTransferMode && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
+            <h2 className="text-lg font-semibold text-yellow-900 mb-2">Transfer Time</h2>
+            <p className="text-yellow-800">
+              You now have 10 minutes to transfer your answers to the answer sheet. 
+              Make sure all answers are clearly written and legible.
+            </p>
+          </div>
+        )}
 
         {/* Questions */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">Questions</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+            {inTransferMode ? 'Answer Sheet' : 'Questions'}
+          </h2>
           
           <div className="space-y-8">
-            {listeningData.questions.map((question, index) => (
-              <div key={question.id} className="border-b border-gray-200 pb-6 last:border-b-0">
-                <div className="flex items-start space-x-4">
-                  <span className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-medium">
-                    {index + 1}
-                  </span>
-                  
-                  <div className="flex-1">
-                    <p className="text-gray-900 mb-4">{question.content}</p>
-                    
-                    {question.type === 'MCQ' && question.options && (
-                      <div className="space-y-2">
-                        {question.options.map((option, optionIndex) => (
-                          <label key={optionIndex} className="flex items-center">
-                            <input
-                              type="radio"
-                              name={`question-${question.id}`}
-                              value={option.split(') ')[0]}
-                              checked={answers[question.id] === option.split(') ')[0]}
-                              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="ml-3 text-gray-700">{option}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {question.type === 'FIB' && (
-                      <input
-                        type="text"
-                        value={answers[question.id] || ''}
-                        onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                        className="mt-2 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder="Your answer..."
-                      />
-                    )}
+            {listeningData.questions.map((question, index) => {
+              // Use IELTS renderer for IELTS question types
+              const isIELTSQuestion = ['NOTES_COMPLETION', 'MULTIPLE_CHOICE', 'TRUE_FALSE_NOT_GIVEN', 'SUMMARY_COMPLETION'].includes(question.type)
+              
+              if (isIELTSQuestion) {
+                return (
+                  <IELTSQuestionRenderer
+                    key={question.id}
+                    question={question as any}
+                    questionNumber={index + 1}
+                    onAnswerChange={handleAnswerChange}
+                    initialAnswer={answers[question.id]}
+                    disabled={submitted}
+                    showInstructions={true}
+                  />
+                )
+              }
+              
+              return (
+                <div key={question.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-4">
+                    <span className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-medium">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-gray-900 mb-4">{question.content}</p>
+                      
+                      {question.options && (
+                        <div className="space-y-2">
+                          {question.options.map((option, optionIndex) => (
+                            <label key={optionIndex} className="flex items-center space-x-3">
+                              <input
+                                type="radio"
+                                name={`question-${question.id}`}
+                                value={option}
+                                onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                                disabled={submitted}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                              />
+                              <span className="text-gray-700">{option}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Submit Button */}
           <div className="mt-8 flex justify-end">
             <button
               onClick={handleSubmit}
-              disabled={submitted}
+              disabled={submitted || (!audioFinished && !inTransferMode)}
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitted ? 'Submitting...' : 'Submit & Continue to Reading'}

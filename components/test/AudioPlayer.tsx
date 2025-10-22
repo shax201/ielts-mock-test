@@ -8,9 +8,10 @@ interface AudioPlayerProps {
   src: string
   demo?: boolean
   onEnded?: () => void
+  autoPlay?: boolean
 }
 
-export default function TestAudioPlayer({ src, demo = false, onEnded }: AudioPlayerProps) {
+export default function TestAudioPlayer({ src, demo = false, onEnded, autoPlay = false }: AudioPlayerProps) {
   const playerRef = useRef<any>(null)
 
   useEffect(() => {
@@ -79,7 +80,7 @@ export default function TestAudioPlayer({ src, demo = false, onEnded }: AudioPla
       <AudioPlayer
         ref={playerRef}
         src={src}
-        autoPlay={true}
+        autoPlay={autoPlay}
         onEnded={onEnded}
         layout="horizontal"
         showJumpControls={false}

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AudioPlayer from '@/components/test/AudioPlayer'
-import FullscreenGuard from '@/components/test/FullscreenGuard'
 
 interface AssignmentData {
   id: string
@@ -54,7 +53,7 @@ export default function InstructionsPage({ params }: { params: Promise<{ token: 
       // If the browser blocks programmatic fullscreen, the guard will show
     } finally {
       const resolvedParams = await params
-      router.push(`/test/${resolvedParams.token}/listening`)
+      router.push(`/test/${resolvedParams.token}/reading`)
     }
   }
 
@@ -89,7 +88,6 @@ export default function InstructionsPage({ params }: { params: Promise<{ token: 
   }
 
   return (
-    <FullscreenGuard>
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -214,6 +212,5 @@ export default function InstructionsPage({ params }: { params: Promise<{ token: 
         </div>
       </div>
     </div>
-    </FullscreenGuard>
   )
 }
