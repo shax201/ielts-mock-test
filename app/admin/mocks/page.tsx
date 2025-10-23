@@ -82,25 +82,6 @@ export default function AdminMocksPage() {
     setViewModalOpen(true)
   }
 
-  const handleEdit = async (id: string, currentTitle: string, currentDescription?: string | null) => {
-    const title = prompt('Update title', currentTitle)
-    if (title === null) return
-    const description = prompt('Update description (optional)', currentDescription || '')
-    try {
-      const res = await fetch(`/api/admin/mocks/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error || 'Failed to update')
-      }
-      await refresh()
-    } catch (e: any) {
-      setError(e?.message || 'Failed to update')
-    }
-  }
 
   return (
     <div>
@@ -195,13 +176,12 @@ export default function AdminMocksPage() {
                       >
                         View
                       </button>
-                      <button
-                        type="button"
+                      <Link
+                        href={`/admin/mocks/${m.id}/edit`}
                         className="text-blue-600 hover:text-blue-800 text-sm"
-                        onClick={() => handleEdit(m.id, m.title, m.description)}
                       >
                         Edit
-                      </button>
+                      </Link>
                       <button
                         type="button"
                         className="text-red-600 hover:text-red-800 text-sm"

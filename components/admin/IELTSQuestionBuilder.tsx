@@ -225,6 +225,7 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
           {question.type === 'NOTES_COMPLETION' && (
             <div className="mb-3">
               <NotesCompletionEditor
+<<<<<<< HEAD
                 title={question.notesCompletionData?.title || ''}
                 instructions={question.notesCompletionData?.instructions || ''}
                 notes={question.notesCompletionData?.notes || []}
@@ -252,6 +253,10 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
                   }
                   onUpdate(question.id, { notesCompletionData: updatedData })
                 }}
+=======
+                data={question.notesCompletionData || { title: '', instructions: '', notes: [] }}
+                onChange={(notesCompletionData) => onUpdate(question.id, { notesCompletionData })}
+>>>>>>> main
               />
             </div>
           )}
@@ -259,6 +264,7 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
           {question.type === 'SUMMARY_COMPLETION' && (
             <div className="mb-3">
               <SummaryCompletionEditor
+<<<<<<< HEAD
                 title={question.summaryCompletionData?.title || ''}
                 instructions={question.summaryCompletionData?.instructions || ''}
                 content={question.summaryCompletionData?.content || ''}
@@ -299,6 +305,10 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
                   }
                   onUpdate(question.id, { summaryCompletionData: updatedData })
                 }}
+=======
+                data={question.summaryCompletionData || { title: '', instructions: '', content: '', blanks: [] }}
+                onChange={(summaryCompletionData) => onUpdate(question.id, { summaryCompletionData })}
+>>>>>>> main
               />
             </div>
           )}
@@ -306,6 +316,7 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
           {question.type === 'TRUE_FALSE_NOT_GIVEN' && (
             <div className="mb-3">
               <TrueFalseNotGivenEditor
+<<<<<<< HEAD
                 statement={question.trueFalseNotGivenData?.statement || ''}
                 correctAnswer={question.trueFalseNotGivenData?.correctAnswer || 'TRUE'}
                 explanation={question.trueFalseNotGivenData?.explanation}
@@ -333,6 +344,10 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
                   }
                   onUpdate(question.id, { trueFalseNotGivenData: updatedData })
                 }}
+=======
+                data={question.trueFalseNotGivenData || { statement: '', correctAnswer: 'TRUE' }}
+                onChange={(trueFalseNotGivenData) => onUpdate(question.id, { trueFalseNotGivenData })}
+>>>>>>> main
               />
             </div>
           )}
@@ -349,6 +364,7 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
           {question.type === 'MATCHING' && (
             <div className="mb-3">
               <MatchingQuestionEditor
+<<<<<<< HEAD
                 leftItems={question.matchingData?.leftItems || []}
                 rightItems={question.matchingData?.rightItems || []}
                 onLeftItemsChange={(leftItems) => {
@@ -365,6 +381,10 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
                   }
                   onUpdate(question.id, { matchingData: updatedData })
                 }}
+=======
+                data={question.matchingData || { leftItems: [], rightItems: [] }}
+                onChange={(matchingData) => onUpdate(question.id, { matchingData })}
+>>>>>>> main
               />
             </div>
           )}

@@ -1,10 +1,17 @@
 'use client'
 
+<<<<<<< HEAD
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import FullscreenGuard from '@/components/test/FullscreenGuard'
 import Timer from '@/components/test/Timer'
 import QuestionRenderer from '@/components/test/QuestionRenderer'
+=======
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import FullscreenGuard from '@/components/test/FullscreenGuard'
+import Timer from '@/components/test/Timer'
+>>>>>>> main
 import IELTSQuestionRenderer from '@/components/test/IELTSQuestionRenderer'
 
 interface Question {
@@ -97,10 +104,13 @@ export default function ReadingModule({ params }: { params: Promise<{ token: str
   const [timeRemaining, setTimeRemaining] = useState(60 * 60) // 60 minutes in seconds
   const [loading, setLoading] = useState(true)
   const [submitted, setSubmitted] = useState(false)
+<<<<<<< HEAD
   const [leftPanelWidth, setLeftPanelWidth] = useState(60) // Percentage
   const [isResizing, setIsResizing] = useState(false)
   const [currentPart, setCurrentPart] = useState(1) // Track current part (1, 2, or 3)
   const containerRef = useRef<HTMLDivElement>(null)
+=======
+>>>>>>> main
   const router = useRouter()
 
   useEffect(() => {
@@ -139,6 +149,7 @@ export default function ReadingModule({ params }: { params: Promise<{ token: str
     }))
   }
 
+<<<<<<< HEAD
   const handlePartChange = (part: number) => {
     setCurrentPart(part)
   }
@@ -217,6 +228,8 @@ export default function ReadingModule({ params }: { params: Promise<{ token: str
     }
   }, [isResizing, handleMouseMove, handleMouseUp])
 
+=======
+>>>>>>> main
   const handleSubmit = async () => {
     if (submitted) return
     
@@ -266,6 +279,7 @@ export default function ReadingModule({ params }: { params: Promise<{ token: str
   }
 
   return (
+<<<<<<< HEAD
     <FullscreenGuard>
     <div className="min-h-screen bg-gray-50">
       {/* Professional Header */}
@@ -288,10 +302,27 @@ export default function ReadingModule({ params }: { params: Promise<{ token: str
             >
               Exit Preview
             </button>
+=======
+    // <FullscreenGuard>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Reading Module</h1>
+              <p className="text-gray-600">Time: 60 minutes</p>
+            </div>
+            <Timer 
+              timeRemaining={timeRemaining}
+              onTimeUp={() => handleSubmit()}
+            />
+>>>>>>> main
           </div>
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Main Content - Full Height Layout */}
       <div ref={containerRef} className="flex h-[calc(100vh-80px)]">
         {/* Left Panel - Reading Passage */}
@@ -382,6 +413,21 @@ export default function ReadingModule({ params }: { params: Promise<{ token: str
             
             {/* Current Part Questions */}
             {getCurrentPartQuestions().map((question, index) => {
+=======
+      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Instructions */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+          <h2 className="text-lg font-semibold text-blue-900 mb-2">Instructions</h2>
+          <p className="text-blue-800">{readingData.module.instructions || 'You will read three passages and answer questions. You should spend about 20 minutes on each passage.'}</p>
+        </div>
+
+        {/* Questions */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Questions</h2>
+          
+          <div className="space-y-8">
+            {readingData.questions.map((question, index) => {
+>>>>>>> main
               // Use IELTS renderer for IELTS question types
               const isIELTSQuestion = ['NOTES_COMPLETION', 'MULTIPLE_CHOICE', 'TRUE_FALSE_NOT_GIVEN', 'SUMMARY_COMPLETION'].includes(question.type)
               
@@ -395,6 +441,10 @@ export default function ReadingModule({ params }: { params: Promise<{ token: str
                     initialAnswer={answers[question.id]}
                     disabled={submitted}
                     showInstructions={true}
+<<<<<<< HEAD
+=======
+                    partContent={readingData.partContent}
+>>>>>>> main
                   />
                 )
               }
@@ -411,6 +461,7 @@ export default function ReadingModule({ params }: { params: Promise<{ token: str
                 />
               )
             })}
+<<<<<<< HEAD
             
             {/* No Questions Message */}
             {getCurrentPartQuestions().length === 0 && (
@@ -430,10 +481,27 @@ export default function ReadingModule({ params }: { params: Promise<{ token: str
                 {submitted ? 'Submitting...' : 'Submit & Complete Test'}
               </button>
             </div>
+=======
+          </div>
+
+          {/* Submit Button */}
+          <div className="mt-8 flex justify-end">
+            <button
+              onClick={handleSubmit}
+              disabled={submitted}
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitted ? 'Submitting...' : 'Submit & Complete Test'}
+            </button>
+>>>>>>> main
           </div>
         </div>
       </div>
     </div>
+<<<<<<< HEAD
     </FullscreenGuard>
+=======
+    // </FullscreenGuard>
+>>>>>>> main
   )
 }

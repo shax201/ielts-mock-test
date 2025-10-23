@@ -428,8 +428,7 @@ export default function TestComplete({ params }: { params: Promise<{ token: stri
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-blue-900">Grading Process</h3>
                 <p className="text-sm text-blue-800">
-                  Your Listening and Reading modules will be automatically scored. 
-                  Writing and Speaking will be graded by our instructors.
+                  Your Listening and Reading modules will be automatically scored.
                 </p>
               </div>
             </div>

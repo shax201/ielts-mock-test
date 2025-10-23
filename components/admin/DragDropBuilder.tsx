@@ -199,6 +199,7 @@ function SortableQuestion({ question, onUpdate, onDelete }: {
           {question.type === 'MATCHING' && (
             <div className="mb-3">
               <MatchingQuestionEditor
+<<<<<<< HEAD
                 leftItems={question.matchingData?.leftItems || []}
                 rightItems={question.matchingData?.rightItems || []}
                 onLeftItemsChange={(leftItems) => {
@@ -215,6 +216,10 @@ function SortableQuestion({ question, onUpdate, onDelete }: {
                   }
                   onUpdate(question.id, { matchingData: updatedMatchingData })
                 }}
+=======
+                data={question.matchingData || { leftItems: [], rightItems: [] }}
+                onChange={(matchingData) => onUpdate(question.id, { matchingData })}
+>>>>>>> main
               />
             </div>
           )}

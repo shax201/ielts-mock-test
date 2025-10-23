@@ -88,6 +88,10 @@ export default function InstructionsPage({ params }: { params: Promise<{ token: 
   }
 
   return (
+<<<<<<< HEAD
+=======
+   
+>>>>>>> main
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -127,24 +131,6 @@ export default function InstructionsPage({ params }: { params: Promise<{ token: 
               </ul>
             </div>
 
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Writing (60 minutes)</h3>
-              <ul className="list-disc list-inside text-gray-700 space-y-1">
-                <li>Task 1: Write at least 150 words (20 minutes)</li>
-                <li>Task 2: Write at least 250 words (40 minutes)</li>
-                <li>Your work will be automatically saved</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Speaking (15 minutes)</h3>
-              <ul className="list-disc list-inside text-gray-700 space-y-1">
-                <li>Part 1: Introduction and interview (4-5 minutes)</li>
-                <li>Part 2: Individual long turn (3-4 minutes)</li>
-                <li>Part 3: Two-way discussion (4-5 minutes)</li>
-                <li>You will type your responses instead of speaking</li>
-              </ul>
-            </div>
           </div>
         </div>
 
@@ -212,5 +198,9 @@ export default function InstructionsPage({ params }: { params: Promise<{ token: 
         </div>
       </div>
     </div>
+<<<<<<< HEAD
+=======
+ 
+>>>>>>> main
   )
 }
