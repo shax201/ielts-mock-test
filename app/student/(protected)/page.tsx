@@ -15,6 +15,37 @@ interface TestResult {
   status: string
 }
 
+interface ParticipationHistoryItem {
+  id: string
+  testTitle: string
+  testDescription: string
+  candidateNumber: string
+  status: string
+  assignedAt: string
+  validFrom: string
+  validUntil: string
+  completedAt: string | null
+  testDuration: number | null
+  progressPercentage: number
+  moduleStatus: Array<{
+    module: string
+    status: string
+    submittedAt: string | null
+    autoScore: number | null
+    instructorMarked: boolean
+  }>
+  overallBand: number | null
+  moduleBands: {
+    listening: number | null
+    reading: number | null
+    writing: number | null
+    speaking: number | null
+  }
+  hasResult: boolean
+  isExpired: boolean
+  canRetake: boolean
+}
+
 interface DashboardStats {
   totalTests: number
   activeTestsCount: number
@@ -33,6 +64,15 @@ interface DashboardStats {
     token: string
     validUntil: string
   }>
+  participationHistory: ParticipationHistoryItem[]
+  summaryStats: {
+    totalTests: number
+    completedTests: number
+    activeTests: number
+    expiredTests: number
+    averageBand: number
+    totalTestTime: number
+  }
 }
 
 export default function StudentDashboard() {
@@ -42,16 +82,31 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch('/api/student/dashboard')
-        if (response.ok) {
-          const data = await response.json()
+        const [dashboardResponse, historyResponse] = await Promise.all([
+          fetch('/api/student/dashboard'),
+          fetch('/api/student/participation-history?limit=5')
+        ])
+
+        if (dashboardResponse.ok && historyResponse.ok) {
+          const dashboardData = await dashboardResponse.json()
+          const historyData = await historyResponse.json()
+          
           // Ensure activeTests is an array and recentResults is an array before setting
-          const dashboardData = {
-            ...data,
-            activeTests: Array.isArray(data.activeTests) ? data.activeTests : [],
-            recentResults: Array.isArray(data.recentResults) ? data.recentResults : []
+          const combinedData = {
+            ...dashboardData,
+            activeTests: Array.isArray(dashboardData.activeTests) ? dashboardData.activeTests : [],
+            recentResults: Array.isArray(dashboardData.recentResults) ? dashboardData.recentResults : [],
+            participationHistory: Array.isArray(historyData.participationHistory) ? historyData.participationHistory : [],
+            summaryStats: historyData.summaryStats || {
+              totalTests: 0,
+              completedTests: 0,
+              activeTests: 0,
+              expiredTests: 0,
+              averageBand: 0,
+              totalTestTime: 0
+            }
           }
-          setStats(dashboardData)
+          setStats(combinedData)
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
@@ -288,10 +343,94 @@ export default function StudentDashboard() {
         </div>
       </div>
 
+      {/* Participation History */}
+      {stats && stats.participationHistory && stats.participationHistory.length > 0 && (
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-medium text-gray-900">Recent Test Participation</h2>
+              <Link href="/student/participation-history" className="text-blue-600 hover:text-blue-500 text-sm font-medium">
+                View All →
+              </Link>
+            </div>
+            <div className="space-y-4">
+              {stats.participationHistory.slice(0, 3).map((item) => (
+                <div key={item.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900">{item.testTitle}</h3>
+                      <p className="text-xs text-gray-500">
+                        Candidate: {item.candidateNumber} • Assigned: {new Date(item.assignedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        item.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                        item.status === 'ACTIVE' ? 'bg-blue-100 text-blue-800' :
+                        item.isExpired ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {item.status === 'COMPLETED' ? 'Completed' :
+                         item.status === 'ACTIVE' ? 'Active' :
+                         item.isExpired ? 'Expired' : item.status}
+                      </span>
+                      {item.overallBand && (
+                        <span className="text-lg font-bold text-blue-600">{Math.round(item.overallBand)}</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Progress</span>
+                      <span>{item.progressPercentage}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${item.progressPercentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Module Status */}
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    {item.moduleStatus.map((module) => (
+                      <div key={module.module} className="text-xs">
+                        <div className={`w-6 h-6 mx-auto rounded-full flex items-center justify-center mb-1 ${
+                          module.status === 'COMPLETED' ? 'bg-green-100 text-green-600' :
+                          module.status === 'IN_PROGRESS' ? 'bg-yellow-100 text-yellow-600' :
+                          'bg-gray-100 text-gray-400'
+                        }`}>
+                          {module.status === 'COMPLETED' ? '✓' : 
+                           module.status === 'IN_PROGRESS' ? '⏳' : '○'}
+                        </div>
+                        <div className="text-gray-500 capitalize">{module.module}</div>
+                        {module.autoScore && (
+                          <div className="text-xs font-medium">{Math.round(module.autoScore)}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Test Duration */}
+                  {item.testDuration && (
+                    <div className="mt-3 text-xs text-gray-500">
+                      Duration: {item.testDuration} minutes
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link href="/student/results" className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
@@ -317,6 +456,20 @@ export default function StudentDashboard() {
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-900">Test History</h3>
                 <p className="text-sm text-gray-500">View all your completed tests and assignments</p>
+              </div>
+            </Link>
+
+            <Link href="/student/participation-history" className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-900">Participation History</h3>
+                <p className="text-sm text-gray-500">Detailed view of all your test participation</p>
               </div>
             </Link>
           </div>
