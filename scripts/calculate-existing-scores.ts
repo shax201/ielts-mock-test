@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 
-import { prisma } from '../lib/db'
-import { scoreReading, scoreListening } from '../lib/scoring/auto-scorer'
-import { calculateReadingBand, calculateListeningBand, calculateOverallBand } from '../lib/scoring/band-calculator'
+import { prisma } from '../src/lib/db'
+import { scoreReading, scoreListening } from '../src/lib/scoring/auto-scorer'
+import { calculateReadingBand, calculateListeningBand, calculateOverallBand } from '../src/lib/scoring/band-calculator'
 
 async function calculateExistingScores() {
   console.log('🔄 Calculating scores for existing submissions...\n')

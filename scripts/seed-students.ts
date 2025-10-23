@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { prisma } from '../lib/db'
+import { prisma } from '../src/lib/db'
 import bcrypt from 'bcryptjs'
 
 async function seedStudents() {
