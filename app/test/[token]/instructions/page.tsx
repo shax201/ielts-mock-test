@@ -88,10 +88,6 @@ export default function InstructionsPage({ params }: { params: Promise<{ token: 
   }
 
   return (
-<<<<<<< HEAD
-=======
-   
->>>>>>> main
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -198,9 +194,5 @@ export default function InstructionsPage({ params }: { params: Promise<{ token: 
         </div>
       </div>
     </div>
-<<<<<<< HEAD
-=======
- 
->>>>>>> main
   )
 }

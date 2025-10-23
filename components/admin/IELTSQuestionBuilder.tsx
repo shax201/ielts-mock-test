@@ -225,38 +225,8 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
           {question.type === 'NOTES_COMPLETION' && (
             <div className="mb-3">
               <NotesCompletionEditor
-<<<<<<< HEAD
-                title={question.notesCompletionData?.title || ''}
-                instructions={question.notesCompletionData?.instructions || ''}
-                notes={question.notesCompletionData?.notes || []}
-                onTitleChange={(title) => {
-                  const updatedData = {
-                    title,
-                    instructions: question.notesCompletionData?.instructions || '',
-                    notes: question.notesCompletionData?.notes || []
-                  }
-                  onUpdate(question.id, { notesCompletionData: updatedData })
-                }}
-                onInstructionsChange={(instructions) => {
-                  const updatedData = {
-                    title: question.notesCompletionData?.title || '',
-                    instructions,
-                    notes: question.notesCompletionData?.notes || []
-                  }
-                  onUpdate(question.id, { notesCompletionData: updatedData })
-                }}
-                onNotesChange={(notes) => {
-                  const updatedData = {
-                    title: question.notesCompletionData?.title || '',
-                    instructions: question.notesCompletionData?.instructions || '',
-                    notes
-                  }
-                  onUpdate(question.id, { notesCompletionData: updatedData })
-                }}
-=======
                 data={question.notesCompletionData || { title: '', instructions: '', notes: [] }}
                 onChange={(notesCompletionData) => onUpdate(question.id, { notesCompletionData })}
->>>>>>> main
               />
             </div>
           )}
@@ -264,51 +234,8 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
           {question.type === 'SUMMARY_COMPLETION' && (
             <div className="mb-3">
               <SummaryCompletionEditor
-<<<<<<< HEAD
-                title={question.summaryCompletionData?.title || ''}
-                instructions={question.summaryCompletionData?.instructions || ''}
-                content={question.summaryCompletionData?.content || ''}
-                blanks={question.summaryCompletionData?.blanks || []}
-                onTitleChange={(title) => {
-                  const updatedData = {
-                    title,
-                    instructions: question.summaryCompletionData?.instructions || '',
-                    content: question.summaryCompletionData?.content || '',
-                    blanks: question.summaryCompletionData?.blanks || []
-                  }
-                  onUpdate(question.id, { summaryCompletionData: updatedData })
-                }}
-                onInstructionsChange={(instructions) => {
-                  const updatedData = {
-                    title: question.summaryCompletionData?.title || '',
-                    instructions,
-                    content: question.summaryCompletionData?.content || '',
-                    blanks: question.summaryCompletionData?.blanks || []
-                  }
-                  onUpdate(question.id, { summaryCompletionData: updatedData })
-                }}
-                onContentChange={(content) => {
-                  const updatedData = {
-                    title: question.summaryCompletionData?.title || '',
-                    instructions: question.summaryCompletionData?.instructions || '',
-                    content,
-                    blanks: question.summaryCompletionData?.blanks || []
-                  }
-                  onUpdate(question.id, { summaryCompletionData: updatedData })
-                }}
-                onBlanksChange={(blanks) => {
-                  const updatedData = {
-                    title: question.summaryCompletionData?.title || '',
-                    instructions: question.summaryCompletionData?.instructions || '',
-                    content: question.summaryCompletionData?.content || '',
-                    blanks
-                  }
-                  onUpdate(question.id, { summaryCompletionData: updatedData })
-                }}
-=======
                 data={question.summaryCompletionData || { title: '', instructions: '', content: '', blanks: [] }}
                 onChange={(summaryCompletionData) => onUpdate(question.id, { summaryCompletionData })}
->>>>>>> main
               />
             </div>
           )}
@@ -316,38 +243,8 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
           {question.type === 'TRUE_FALSE_NOT_GIVEN' && (
             <div className="mb-3">
               <TrueFalseNotGivenEditor
-<<<<<<< HEAD
-                statement={question.trueFalseNotGivenData?.statement || ''}
-                correctAnswer={question.trueFalseNotGivenData?.correctAnswer || 'TRUE'}
-                explanation={question.trueFalseNotGivenData?.explanation}
-                onStatementChange={(statement) => {
-                  const updatedData = {
-                    statement,
-                    correctAnswer: question.trueFalseNotGivenData?.correctAnswer || 'TRUE',
-                    explanation: question.trueFalseNotGivenData?.explanation
-                  }
-                  onUpdate(question.id, { trueFalseNotGivenData: updatedData })
-                }}
-                onCorrectAnswerChange={(correctAnswer) => {
-                  const updatedData = {
-                    statement: question.trueFalseNotGivenData?.statement || '',
-                    correctAnswer,
-                    explanation: question.trueFalseNotGivenData?.explanation
-                  }
-                  onUpdate(question.id, { trueFalseNotGivenData: updatedData })
-                }}
-                onExplanationChange={(explanation) => {
-                  const updatedData = {
-                    statement: question.trueFalseNotGivenData?.statement || '',
-                    correctAnswer: question.trueFalseNotGivenData?.correctAnswer || 'TRUE',
-                    explanation
-                  }
-                  onUpdate(question.id, { trueFalseNotGivenData: updatedData })
-                }}
-=======
                 data={question.trueFalseNotGivenData || { statement: '', correctAnswer: 'TRUE' }}
                 onChange={(trueFalseNotGivenData) => onUpdate(question.id, { trueFalseNotGivenData })}
->>>>>>> main
               />
             </div>
           )}
@@ -364,27 +261,8 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
           {question.type === 'MATCHING' && (
             <div className="mb-3">
               <MatchingQuestionEditor
-<<<<<<< HEAD
-                leftItems={question.matchingData?.leftItems || []}
-                rightItems={question.matchingData?.rightItems || []}
-                onLeftItemsChange={(leftItems) => {
-                  const updatedData = {
-                    leftItems,
-                    rightItems: question.matchingData?.rightItems || []
-                  }
-                  onUpdate(question.id, { matchingData: updatedData })
-                }}
-                onRightItemsChange={(rightItems) => {
-                  const updatedData = {
-                    leftItems: question.matchingData?.leftItems || [],
-                    rightItems
-                  }
-                  onUpdate(question.id, { matchingData: updatedData })
-                }}
-=======
                 data={question.matchingData || { leftItems: [], rightItems: [] }}
                 onChange={(matchingData) => onUpdate(question.id, { matchingData })}
->>>>>>> main
               />
             </div>
           )}
