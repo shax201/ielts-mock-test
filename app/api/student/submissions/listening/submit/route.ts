@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { AssignmentStatus } from '@prisma/client'
 import { scoreListening } from '@/lib/scoring/auto-scorer'
 import { calculateListeningBand } from '@/lib/scoring/band-calculator'
+import { calculateAndStoreResults } from '@/lib/scoring/result-calculator'
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, answers, timeSpent } = await request.json()
+    const body = await request.json()
+    const { token, answers, timeSpent } = body
 
-    if (!token || !answers) {
-      return NextResponse.json(
-        { error: 'Token and answers are required' },
-        { status: 400 }
-      )
+    if (!token) {
+      return NextResponse.json({ error: 'Token is required' }, { status: 400 })
     }
 
-    // Find assignment
+    // Find assignment by token
     const assignment = await prisma.assignment.findUnique({
       where: { tokenHash: token },
       include: {
@@ -37,18 +35,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (!assignment) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Invalid token' }, { status: 404 })
     }
 
     const listeningModule = assignment.mock.modules[0]
     if (!listeningModule) {
-      return NextResponse.json(
-        { error: 'Listening module not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Listening module not found' }, { status: 404 })
     }
 
     // Check if submission already exists
@@ -86,7 +78,9 @@ export async function POST(request: NextRequest) {
       
       return {
         questionId: q.id,
-        answer: (q.questionBank.contentJson as any).correctAnswer || '',
+        answer: typeof q.correctAnswerJson === 'string' ? q.correctAnswerJson : 
+                Array.isArray(q.correctAnswerJson) ? q.correctAnswerJson.map(String) : 
+                String(q.correctAnswerJson || ''),
         type: mappedType as 'MCQ' | 'FIB' | 'MATCHING' | 'TRUE_FALSE' | 'NOT_GIVEN'
       }
     })
@@ -119,14 +113,27 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Calculate and store overall results
+    try {
+      await calculateAndStoreResults(assignment.id)
+    } catch (error) {
+      console.error('Error calculating results:', error)
+      // Don't fail the submission if result calculation fails
+    }
+
     return NextResponse.json({
       success: true,
-      submissionId: submission.id
+      submissionId: submission.id,
+      score: {
+        correctCount: scoreResult.correctCount,
+        totalQuestions: scoreResult.totalQuestions,
+        bandScore: bandScore
+      }
     })
   } catch (error) {
-    console.error('Listening submission error:', error)
+    console.error('Submit error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to submit' },
       { status: 500 }
     )
   }

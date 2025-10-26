@@ -138,6 +138,143 @@ export default function StudentDashboard() {
         </div>
       </div>
 
+      {/* Motivational Header */}
+      <div className="text-center">
+        <p className="text-lg text-gray-700 font-medium">
+          Hey {stats?.recentResults?.[0]?.testTitle ? 'Student' : 'Student'}, week after week, witness compounded growth!
+        </p>
+      </div>
+
+      {/* Where You Stand Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Where You Stand</h2>
+          
+          {/* Skill Navigation Buttons */}
+          <div className="flex space-x-4 mb-6">
+            <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+              Listening
+            </button>
+            <button className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              Reading
+            </button>
+            <button className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              Writing
+            </button>
+            <button className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              Speaking
+            </button>
+          </div>
+
+          {/* Performance Graph */}
+          <div className="relative">
+            <div className="absolute top-2 left-2">
+              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                Band Score
+              </span>
+            </div>
+            
+            {/* Graph Container */}
+            <div className="bg-gray-50 rounded-lg p-4 h-80 relative">
+              {/* Y-axis labels */}
+              <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500">
+                <span>9</span>
+                <span>8</span>
+                <span>7</span>
+                <span>6</span>
+                <span>5</span>
+                <span>4</span>
+                <span>3</span>
+                <span>2</span>
+                <span>1</span>
+                <span>0</span>
+              </div>
+              
+              {/* Graph Area */}
+              <div className="ml-8 h-full relative">
+                {/* Grid Lines */}
+                <div className="absolute inset-0">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+                    <div key={i} className="absolute w-full border-t border-gray-200" style={{ top: `${(9-i) * 11.11}%` }}></div>
+                  ))}
+                  {Array.from({length: 20}, (_, i) => (
+                    <div key={i} className="absolute h-full border-l border-gray-200" style={{ left: `${i * 5}%` }}></div>
+                  ))}
+                </div>
+                
+                {/* Sample Data Lines */}
+                <svg className="absolute inset-0 w-full h-full">
+                  {/* Score Trend Line (Grey) */}
+                  <polyline
+                    points="0,60 50,60 100,60 150,60 200,60 250,60 300,60 350,60 400,60 450,60 500,60 550,60 600,60 650,60 700,60 750,60 800,60 850,60 900,60 950,60"
+                    fill="none"
+                    stroke="#6B7280"
+                    strokeWidth="2"
+                  />
+                  
+                  {/* Score Line (Red) */}
+                  <polyline
+                    points="0,180 50,120 100,100 150,80 200,100 250,120 300,140 350,120 400,100 450,80 500,100 550,120 600,140 650,160 700,180 750,200 800,180 850,160 900,140 950,120"
+                    fill="none"
+                    stroke="#EF4444"
+                    strokeWidth="3"
+                  />
+                  
+                  {/* Score Line Fill */}
+                  <polygon
+                    points="0,180 0,180 50,120 100,100 150,80 200,100 250,120 300,140 350,120 400,100 450,80 500,100 550,120 600,140 650,160 700,180 750,200 800,180 850,160 900,140 950,120 950,180"
+                    fill="rgba(239, 68, 68, 0.1)"
+                  />
+                  
+                  {/* Data Points */}
+                  {[
+                    {x: 0, y: 180}, {x: 50, y: 120}, {x: 100, y: 100}, {x: 150, y: 80}, {x: 200, y: 100},
+                    {x: 250, y: 120}, {x: 300, y: 140}, {x: 350, y: 120}, {x: 400, y: 100}, {x: 450, y: 80},
+                    {x: 500, y: 100}, {x: 550, y: 120}, {x: 600, y: 140}, {x: 650, y: 160}, {x: 700, y: 180},
+                    {x: 750, y: 200}, {x: 800, y: 180}, {x: 850, y: 160}, {x: 900, y: 140}, {x: 950, y: 120}
+                  ].map((point, index) => (
+                    <circle key={index} cx={point.x} cy={point.y} r="4" fill="#EF4444" />
+                  ))}
+                </svg>
+                
+                {/* X-axis labels */}
+                <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500">
+                  {Array.from({length: 21}, (_, i) => (
+                    <span key={i} className="transform -rotate-45 origin-left" style={{ marginLeft: `${i * 4.5}%` }}>
+                      {i}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Legend */}
+            <div className="flex items-center justify-center mt-4 space-x-6">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-red-500 rounded mr-2"></div>
+                <span className="text-sm text-gray-600">Score</span>
+              </div>
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-gray-500 rounded mr-2"></div>
+                <span className="text-sm text-gray-600">Score Trend</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -282,66 +419,7 @@ export default function StudentDashboard() {
         </div>
       ) : null}
 
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Test Results</h2>
-          {stats && stats.recentResults && Array.isArray(stats.recentResults) && stats.recentResults.length > 0 ? (
-            <div className="space-y-4">
-              {stats.recentResults.slice(0, 3).map((result, index) => {
-                // Safety check for result object
-                if (!result || typeof result !== 'object') {
-                  return null
-                }
-                return (
-                  <div key={result.id || index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900">{result.testTitle || 'Untitled Test'}</h3>
-                        <p className="text-sm text-gray-500">
-                          Completed: {result.completedAt ? new Date(result.completedAt).toLocaleDateString() : 'N/A'}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-blue-600">{Math.round(result.overallBand || 0)}</div>
-                        <div className="text-xs text-gray-500">Overall Band</div>
-                      </div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-4 gap-4 text-center">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{Math.round(result.listeningBand || 0)}</div>
-                        <div className="text-xs text-gray-500">Listening</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{Math.round(result.readingBand || 0)}</div>
-                        <div className="text-xs text-gray-500">Reading</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{Math.round(result.writingBand || 0)}</div>
-                        <div className="text-xs text-gray-500">Writing</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{Math.round(result.speakingBand || 0)}</div>
-                        <div className="text-xs text-gray-500">Speaking</div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-              <div className="text-center">
-                <Link href="/student/results" className="text-blue-600 hover:text-blue-500 text-sm font-medium">View All Results →</Link>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No test results yet</h3>
-              <p className="mt-1 text-sm text-gray-500">Complete your first IELTS test to see results here.</p>
-            </div>
-          )}
-        </div>
-      </div>
+    
 
       {/* Participation History */}
       {stats && stats.participationHistory && stats.participationHistory.length > 0 && (
@@ -427,52 +505,133 @@ export default function StudentDashboard() {
         </div>
       )}
 
+      {/* Assigned Tests Section */}
       <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/student/results" className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-900">View All Results</h3>
-                <p className="text-sm text-gray-500">See detailed results and performance analysis</p>
-              </div>
-            </Link>
-
-            <Link href="/student/tests" className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-900">Test History</h3>
-                <p className="text-sm text-gray-500">View all your completed tests and assignments</p>
-              </div>
-            </Link>
-
-            <Link href="/student/participation-history" className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center">
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-900">Participation History</h3>
-                <p className="text-sm text-gray-500">Detailed view of all your test participation</p>
-              </div>
-            </Link>
+        <div className="px-6 py-5">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Assigned Tests</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr.No</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No Record Found
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
+      </div>
+
+      {/* Five Recently Attempted Tests Section */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-5">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Five Recently Attempted Tests</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sr.No</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Test Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempted Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Band</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">View</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">IELTS Listening - 7 (BT-L-7E)</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Oct 24, 2025 03:41:15 PM</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Listening: 2</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs">View Analysis</button>
+                      <button className="bg-green-600 text-white px-3 py-1 rounded text-xs">Download Score Card</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">IELTS Listening - 6 (BT-L-6E)</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Oct 24, 2025 10:40:18 AM</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Listening: 4.5</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs">View Analysis</button>
+                      <button className="bg-green-600 text-white px-3 py-1 rounded text-xs">Download Score Card</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">3</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">IELTS Listening - 5 (BT-L-5E)</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Oct 24, 2025 10:40:18 AM</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Listening: 4</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs">View Analysis</button>
+                      <button className="bg-green-600 text-white px-3 py-1 rounded text-xs">Download Score Card</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">4</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">IELTS Listening - 4 (BT-L-4E)</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Oct 24, 2025 10:40:18 AM</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Listening: 6</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs">View Analysis</button>
+                      <button className="bg-green-600 text-white px-3 py-1 rounded text-xs">Download Score Card</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">5</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">IELTS Listening - 3 (BT-L-3E)</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Oct 24, 2025 10:40:18 AM</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Listening: 5.5</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs">View Analysis</button>
+                      <button className="bg-green-600 text-white px-3 py-1 rounded text-xs">Download Score Card</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          {/* View More Button */}
+          <div className="text-center mt-6">
+            <button className="bg-blue-600 text-white px-6 py-2 rounded">
+              View More
+            </button>
+          </div>
+          
+          {/* Disclaimer */}
+          <div className="text-center mt-4">
+            <p className="text-xs text-gray-500">
+              *All the test names are registered trademarks of their respective owners. They neither sponsor nor endorse this product
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-gray-200 bg-white">
+        <div className="text-center py-8">
+          <p className="text-lg font-bold text-gray-900">Radiance Education</p>
         </div>
       </div>
     </div>

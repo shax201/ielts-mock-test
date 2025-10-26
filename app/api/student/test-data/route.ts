@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { verifyJWT } from '@/lib/auth/jwt'
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('auth-token')?.value
     const { searchParams } = new URL(request.url)
     const testToken = searchParams.get('token')
     const moduleType = searchParams.get('module')
 
-    if (!token || !testToken) {
+    if (!testToken) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
     }
 
@@ -45,11 +43,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Test token has expired' }, { status: 403 })
     }
 
-    // Find the specific module
+    // Find the specific module with related data
     const module = assignment.mock.modules.find(m => m.type === moduleType?.toUpperCase())
     
     if (!module) {
       return NextResponse.json({ error: 'Module not found' }, { status: 404 })
+    }
+
+    // Fetch module-specific data
+    let readingData = null
+    let listeningData = null
+
+    if (module.type === 'READING') {
+      readingData = await prisma.readingModuleData.findUnique({
+        where: { moduleId: module.id }
+      })
+    } else if (module.type === 'LISTENING') {
+      listeningData = await prisma.listeningModuleData.findUnique({
+        where: { moduleId: module.id }
+      })
     }
 
     // Transform questions for the frontend
@@ -64,7 +76,8 @@ export async function GET(request: NextRequest) {
         fibData: content.fibData || null,
         instructions: content.instructions || '',
         points: q.points,
-        correctAnswer: q.correctAnswerJson
+        correctAnswer: q.correctAnswerJson,
+        part: content.part || 1
       }
     })
 
@@ -74,7 +87,10 @@ export async function GET(request: NextRequest) {
         type: module.type,
         duration: module.durationMinutes,
         audioUrl: module.audioUrl,
-        instructions: module.instructions
+        instructions: module.instructions,
+        passageContent: module.passageContent,
+        readingData: readingData,
+        listeningData: listeningData
       },
       questions,
       assignment: {

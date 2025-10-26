@@ -109,8 +109,10 @@ interface IELTSQuestionBuilderProps {
   moduleType: 'LISTENING' | 'READING' | 'WRITING' | 'SPEAKING'
   onQuestionsChange: (questions: IELTSQuestion[]) => void
   onPartContentChange?: (content: PartContent) => void
+  onPassageContentChange?: (content: { part1: string; part2: string; part3: string }) => void
   initialQuestions?: IELTSQuestion[]
   initialPartContent?: PartContent
+  initialPassageContent?: { part1: string; part2: string; part3: string }
 }
 
 function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
@@ -365,17 +367,24 @@ function SortableIELTSQuestion({ question, onUpdate, onDelete }: {
   )
 }
 
-export default function IELTSQuestionBuilder({ moduleType, onQuestionsChange, onPartContentChange, initialQuestions = [], initialPartContent }: IELTSQuestionBuilderProps) {
+export default function IELTSQuestionBuilder({ moduleType, onQuestionsChange, onPartContentChange, onPassageContentChange, initialQuestions = [], initialPartContent, initialPassageContent }: IELTSQuestionBuilderProps) {
   const [questions, setQuestions] = useState<IELTSQuestion[]>(initialQuestions)
   const [part1Content, setPart1Content] = useState(initialPartContent?.part1 || '')
   const [part2Content, setPart2Content] = useState(initialPartContent?.part2 || '')
   const [part3Content, setPart3Content] = useState(initialPartContent?.part3 || '')
+  const [passage1Content, setPassage1Content] = useState(initialPassageContent?.part1 || '')
+  const [passage2Content, setPassage2Content] = useState(initialPassageContent?.part2 || '')
+  const [passage3Content, setPassage3Content] = useState(initialPassageContent?.part3 || '')
   const [newQuestionType, setNewQuestionType] = useState<IELTSQuestion['type']>('NOTES_COMPLETION')
   const [newQuestionPart, setNewQuestionPart] = useState<1 | 2 | 3>(1)
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentEditingPart, setCurrentEditingPart] = useState<1 | 2 | 3>(1)
+  
+  // Passage modal state
+  const [isPassageModalOpen, setIsPassageModalOpen] = useState(false)
+  const [currentEditingPassage, setCurrentEditingPassage] = useState<1 | 2 | 3>(1)
   
   // Question creation modal state
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false)
@@ -450,6 +459,25 @@ export default function IELTSQuestionBuilder({ moduleType, onQuestionsChange, on
     onPartContentChange?.(newPartContent)
   }
 
+  // Passage content handlers
+  const handlePassage1ContentChange = (content: string) => {
+    setPassage1Content(content)
+    const newPassageContent = { part1: content, part2: passage2Content, part3: passage3Content }
+    onPassageContentChange?.(newPassageContent)
+  }
+
+  const handlePassage2ContentChange = (content: string) => {
+    setPassage2Content(content)
+    const newPassageContent = { part1: passage1Content, part2: content, part3: passage3Content }
+    onPassageContentChange?.(newPassageContent)
+  }
+
+  const handlePassage3ContentChange = (content: string) => {
+    setPassage3Content(content)
+    const newPassageContent = { part1: passage1Content, part2: passage2Content, part3: content }
+    onPassageContentChange?.(newPassageContent)
+  }
+
   // Modal handlers
   const openModal = async (part: 1 | 2 | 3) => {
     setCurrentEditingPart(part)
@@ -484,6 +512,37 @@ export default function IELTSQuestionBuilder({ moduleType, onQuestionsChange, on
 
   const closeModal = () => {
     setIsModalOpen(false)
+  }
+
+  // Passage modal handlers
+  const openPassageModal = async (part: 1 | 2 | 3) => {
+    setCurrentEditingPassage(part)
+    setIsPassageModalOpen(true)
+  }
+
+  const closePassageModal = () => {
+    setIsPassageModalOpen(false)
+  }
+
+  const handlePassageModalSave = async (content: string) => {
+    console.log('handlePassageModalSave called with content:', content)
+    console.log('currentEditingPassage:', currentEditingPassage)
+    
+    if (currentEditingPassage === 1) {
+      handlePassage1ContentChange(content)
+    } else if (currentEditingPassage === 2) {
+      handlePassage2ContentChange(content)
+    } else if (currentEditingPassage === 3) {
+      handlePassage3ContentChange(content)
+    }
+    
+    setIsPassageModalOpen(false)
+  }
+
+  const getCurrentPassageContent = () => {
+    if (currentEditingPassage === 1) return passage1Content
+    if (currentEditingPassage === 2) return passage2Content
+    return passage3Content
   }
 
   const handleModalSave = async (content: string) => {
@@ -823,6 +882,56 @@ export default function IELTSQuestionBuilder({ moduleType, onQuestionsChange, on
               </p>
             </div>
 
+            {/* Passage Content Editor - Only for Reading modules */}
+            {moduleType === 'READING' && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Part {part} Reading Passage
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => openPassageModal(part as 1 | 2 | 3)}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  >
+                    <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Edit Passage
+                  </button>
+                </div>
+                
+                {/* Passage Preview */}
+                <div className="border border-gray-200 rounded-lg p-4 bg-green-50 min-h-[100px]">
+                  {(() => {
+                    const passageContent = part === 1 ? passage1Content : part === 2 ? passage2Content : passage3Content
+                    if (!passageContent.trim()) {
+                      return (
+                        <div className="text-gray-500 italic">
+                          No reading passage added yet. Click "Edit Passage" to add the reading passage for Part {part}.
+                        </div>
+                      )
+                    }
+                    return (
+                      <div className="text-sm text-gray-700">
+                        <div 
+                          dangerouslySetInnerHTML={{ 
+                            __html: passageContent
+                              .replace(/<p>/g, '<p class="mb-2">')
+                              .substring(0, 200) + (passageContent.length > 200 ? '...' : '')
+                          }}
+                        />
+                      </div>
+                    )
+                  })()}
+                </div>
+                
+                <p className="mt-1 text-xs text-gray-500">
+                  This reading passage will be displayed for Part {part} questions.
+                </p>
+              </div>
+            )}
+
             {/* Create Question Button */}
             <div className="mb-4">
               <button
@@ -886,6 +995,19 @@ export default function IELTSQuestionBuilder({ moduleType, onQuestionsChange, on
         onSave={handleModalSave}
         title={`Edit Part ${currentEditingPart} Content`}
       />
+
+      {/* Passage Content Modal - Only for Reading modules */}
+      {moduleType === 'READING' && (
+        <PartContentModal
+          key={`passage-${currentEditingPassage}-${isPassageModalOpen}`}
+          isOpen={isPassageModalOpen}
+          onClose={closePassageModal}
+          partNumber={currentEditingPassage}
+          content={getCurrentPassageContent()}
+          onSave={handlePassageModalSave}
+          title={`Edit Part ${currentEditingPassage} Reading Passage`}
+        />
+      )}
 
       {/* Question Creation Modal */}
       <QuestionCreationModal

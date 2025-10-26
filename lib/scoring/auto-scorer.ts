@@ -53,7 +53,15 @@ function checkAnswerCorrectness(
   type: string
 ): boolean {
   // Normalize answers (trim, lowercase)
-  const normalizedStudent = studentAnswer.trim().toLowerCase()
+  let normalizedStudent = studentAnswer.trim().toLowerCase()
+  
+  // For multiple choice questions, extract the letter if the answer is in format "A) Option text"
+  if (type === 'MCQ' || type === 'MULTIPLE_CHOICE') {
+    const letterMatch = normalizedStudent.match(/^([a-d])\)/)
+    if (letterMatch) {
+      normalizedStudent = letterMatch[1]
+    }
+  }
   
   if (Array.isArray(correctAnswer)) {
     // Multiple correct answers (e.g., for fill-in-blanks)

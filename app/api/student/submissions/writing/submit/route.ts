@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { AssignmentStatus } from '@prisma/client'
+import { calculateAndStoreResults } from '@/lib/scoring/result-calculator'
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, answers, timeSpent } = await request.json()
+    const body = await request.json()
+    const { token, answers, timeSpent } = body
 
-    if (!token || !answers) {
-      return NextResponse.json(
-        { error: 'Token and answers are required' },
-        { status: 400 }
-      )
+    if (!token) {
+      return NextResponse.json({ error: 'Token is required' }, { status: 400 })
     }
 
-    // Find assignment
+    // Find assignment by token
     const assignment = await prisma.assignment.findUnique({
       where: { tokenHash: token },
       include: {
@@ -28,33 +26,26 @@ export async function POST(request: NextRequest) {
     })
 
     if (!assignment) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Invalid token' }, { status: 404 })
     }
 
     const writingModule = assignment.mock.modules[0]
     if (!writingModule) {
-      return NextResponse.json(
-        { error: 'Writing module not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Writing module not found' }, { status: 404 })
     }
 
     // Check if submission already exists
-    const existingSubmission = await prisma.submission.findFirst({
+    let submission = await prisma.submission.findFirst({
       where: {
         assignmentId: assignment.id,
         moduleId: writingModule.id
       }
     })
 
-    let submission
-    if (existingSubmission) {
+    if (submission) {
       // Update existing submission
-      submission = await prisma.submission.update({
-        where: { id: existingSubmission.id },
+      await prisma.submission.update({
+        where: { id: submission.id },
         data: {
           answersJson: answers,
           submittedAt: new Date()
@@ -62,7 +53,7 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Create new submission
-      submission = await prisma.submission.create({
+      await prisma.submission.create({
         data: {
           assignmentId: assignment.id,
           moduleId: writingModule.id,
@@ -73,14 +64,19 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({
-      success: true,
-      submissionId: submission.id
-    })
+    // Calculate and store overall results
+    try {
+      await calculateAndStoreResults(assignment.id)
+    } catch (error) {
+      console.error('Error calculating results:', error)
+      // Don't fail the submission if result calculation fails
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Writing submission error:', error)
+    console.error('Submit error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to submit' },
       { status: 500 }
     )
   }

@@ -65,9 +65,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             fibData: content.fibData || null,
             instructions: content.instructions || '',
             points: q.points,
-            correctAnswer: q.correctAnswerJson
+            correctAnswer: q.correctAnswerJson,
+            part: content.part || 1
           }
-        })
+        }),
+        passageContent: module.passageContent
       }))
     }
 
@@ -153,6 +155,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             audioUrl: module.audioUrl || null,
             instructions: module.instructions || '',
             order: moduleIndex + 1,
+            passageContent: module.passageContent || null,
           }
         })
 
@@ -167,7 +170,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                   options: question.options || [],
                   fibData: question.fibData || null,
                   instructions: question.instructions || '',
-                  type: question.type || 'MCQ'
+                  type: question.type || 'MCQ',
+                  part: question.part || 1
                 },
                 reusable: false
               }
