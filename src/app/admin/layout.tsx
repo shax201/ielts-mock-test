@@ -93,6 +93,7 @@ export default function AdminLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -112,12 +113,30 @@ export default function AdminLayout({
     fetchUser()
   }, [])
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      
+      if (isProfileOpen && !target.closest('.profile-dropdown')) {
+        setIsProfileOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isProfileOpen])
+
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
+      setUser(null)
+      setIsProfileOpen(false)
       router.push('/admin/login')
     } catch (error) {
       console.error('Logout error:', error)
+      // Still redirect to login even if logout API fails
+      router.push('/admin/login')
     }
   }
 
@@ -246,10 +265,11 @@ export default function AdminLayout({
               <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200" />
 
               {/* Profile dropdown */}
-              <div className="relative">
+              <div className="relative profile-dropdown">
                 <button
                   type="button"
-                  className="-m-1.5 flex items-center p-1.5"
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="-m-1.5 flex items-center p-1.5 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <span className="sr-only">Open user menu</span>
                   <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
@@ -266,6 +286,28 @@ export default function AdminLayout({
                     </svg>
                   </span>
                 </button>
+                
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                    <div className="py-1" role="menu">
+                      <div className="px-4 py-3 text-sm text-gray-700 border-b border-gray-100">
+                        <div className="font-medium">{user?.name || 'Admin User'}</div>
+                        <div className="text-gray-500">{user?.email}</div>
+                        <div className="text-xs text-blue-600 mt-1">{user?.role}</div>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        role="menuitem"
+                      >
+                        <svg className="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

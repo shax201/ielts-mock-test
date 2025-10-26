@@ -9,6 +9,7 @@ import IELTSQuestionRenderer from '@/components/test/IELTSQuestionRenderer'
 // Dynamic imports to avoid SSR issues
 const DragDropBuilder = dynamic(() => import('@/components/admin/DragDropBuilder'), { ssr: false })
 const IELTSQuestionBuilder = dynamic(() => import('@/components/admin/IELTSQuestionBuilder'), { ssr: false })
+const IELTSListeningBuilder = dynamic(() => import('@/components/admin/IELTSListeningBuilder'), { ssr: false })
 
 interface Question {
   id: string
@@ -87,6 +88,11 @@ interface MockTestData {
     instructions: string
     questions: Question[]
     partContent?: PartContent
+    passageContent?: {
+      part1: string
+      part2: string
+      part3: string
+    }
     readingPassage?: {
       title: string
       content: Array<{
@@ -108,6 +114,16 @@ export default function CreateMockTest() {
   const [previewMode, setPreviewMode] = useState(false)
   const [currentModule, setCurrentModule] = useState<'LISTENING' | 'READING' | 'WRITING' | 'SPEAKING'>('READING')
   const [partContent, setPartContent] = useState<PartContent>({ part1: '', part2: '', part3: '' })
+  const [passageContent, setPassageContent] = useState<{
+    part1: string
+    part2: string
+    part3: string
+  }>({
+    part1: '',
+    part2: '',
+    part3: ''
+  })
+  const [audioUrl, setAudioUrl] = useState('')
   const router = useRouter()
 
   // Preview mode state
@@ -121,6 +137,18 @@ export default function CreateMockTest() {
   const handleSave = async (isDraft = false) => {
     setLoading(true)
     try {
+      // Debug logging for audioUrl
+      console.log('Saving mock test with data:', {
+        title: mockData.title,
+        modulesCount: mockData.modules.length,
+        modules: mockData.modules.map(m => ({
+          type: m.type,
+          audioUrl: m.audioUrl,
+          hasAudioUrl: !!m.audioUrl,
+          audioUrlLength: m.audioUrl?.length || 0
+        }))
+      })
+      
       const response = await fetch('/api/admin/mocks', {
         method: 'POST',
         headers: {
@@ -168,6 +196,38 @@ export default function CreateMockTest() {
       modules: prev.modules.map(m => 
         m.type === currentModule 
           ? { ...m, partContent: content }
+          : m
+      )
+    }))
+  }
+
+  const handlePassageContentChange = (content: { part1: string; part2: string; part3: string }) => {
+    setPassageContent(content)
+    // Update the current module's passage content
+    setMockData(prev => ({
+      ...prev,
+      modules: prev.modules.map(m => 
+        m.type === currentModule 
+          ? { ...m, passageContent: content }
+          : m
+      )
+    }))
+  }
+
+  const handleAudioUrlChange = (url: string) => {
+    console.log('Create page: Audio URL changed:', {
+      url,
+      urlLength: url?.length || 0,
+      hasUrl: !!url,
+      currentModule
+    })
+    setAudioUrl(url)
+    // Update the current module's audio URL
+    setMockData(prev => ({
+      ...prev,
+      modules: prev.modules.map(m => 
+        m.type === 'LISTENING' 
+          ? { ...m, audioUrl: url }
           : m
       )
     }))
@@ -267,11 +327,61 @@ export default function CreateMockTest() {
 
   // Render preview mode
   const renderPreviewMode = () => {
-    const readingModule = getCurrentModule()
-    if (!readingModule) return null
+    const currentModuleData = getCurrentModule()
+    if (!currentModuleData) {
+      return (
+        <div className="h-screen flex items-center justify-center bg-white">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">No Module Found</h2>
+            <p className="text-gray-600 mb-4">Please add a {currentModule} module before previewing.</p>
+            <button 
+              onClick={() => setPreviewMode(false)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Back to Editor
+            </button>
+          </div>
+        </div>
+      )
+    }
 
+    // Handle different module types
+    if (currentModule === 'LISTENING') {
+      return renderListeningPreview(currentModuleData)
+    } else if (currentModule === 'READING') {
+      return renderReadingPreview(currentModuleData)
+    } else if (currentModule === 'WRITING') {
+      return renderWritingPreview(currentModuleData)
+    }
+
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Preview Not Available</h2>
+          <p className="text-gray-600 mb-4">Preview mode is not yet implemented for {currentModule} modules.</p>
+          <button 
+            onClick={() => setPreviewMode(false)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Back to Editor
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Render reading preview
+  const renderReadingPreview = (readingModule: any) => {
     const currentPartQuestions = getQuestionsForPart(previewCurrentPart)
     const totalParts = getTotalParts()
+    
+    console.log('Reading preview mode debug:', {
+      readingModule,
+      currentPartQuestions,
+      totalParts,
+      previewCurrentPart,
+      mockData
+    })
 
     return (
       <FullscreenGuard>
@@ -329,61 +439,61 @@ export default function CreateMockTest() {
                   </div>
                 </div>
 
-                {readingModule.partContent ? (
-                  <div className="space-y-4">
-                    {(() => {
-                      const partKey = `part${previewCurrentPart}` as keyof PartContent
-                      const currentPartContent = readingModule.partContent[partKey]
-                      
-                      if (currentPartContent) {
-                        return (
-                          <div className="mb-6">
-                            <h3 className="text-lg font-bold mb-4">Reading Passage</h3>
-                            <div className="bg-white border border-gray-200 rounded-lg p-6">
-                              <div 
-                                className="text-justify leading-relaxed"
-                                style={{
-                                  lineHeight: '1.6',
-                                  fontSize: '14px',
-                                  fontFamily: 'system-ui, -apple-system, sans-serif'
-                                }}
-                                dangerouslySetInnerHTML={{ 
-                                  __html: currentPartContent
-                                    // Ensure proper paragraph formatting with spacing
-                                    .replace(/<p>/g, '<p class="mb-4" style="margin-bottom: 1rem;">')
-                                    // Format paragraph labels (A., B., C., etc.) with proper styling
-                                    .replace(/<p[^>]*><strong>([A-Z])\.<\/strong>/g, '<p class="mb-4" style="margin-bottom: 1rem;"><strong style="font-weight: bold; color: #111827;">$1.</strong>')
-                                    // Ensure text is properly formatted
-                                    .replace(/<p[^>]*>([^<]*[A-Z]\.)/g, '<p class="mb-4" style="margin-bottom: 1rem;"><strong style="font-weight: bold; color: #111827;">$1</strong>')
-                                }}
-                              />
-                            </div>
-                          </div>
-                        )
-                      } else {
-                        return (
-                          <div className="flex items-center justify-center h-full">
-                            <div className="text-center">
-                              <div className="text-gray-500 text-lg mb-2">No Content</div>
-                              <div className="text-gray-400 text-sm">
-                                No content has been added for Part {previewCurrentPart} yet
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      }
-                    })()}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <div className="text-gray-500 text-lg mb-2">No Content</div>
-                      <div className="text-gray-400 text-sm">
-                        No reading content has been added yet
-                      </div>
+                {/* Reading Passage Content */}
+                <div className="space-y-4">
+                  <div className="mb-6">
+                    <h3 className="text-lg font-bold mb-4">Reading Passage - Part {previewCurrentPart}</h3>
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      {readingModule.passageContent ? (
+                        <div className="space-y-4">
+                          {(() => {
+                            const partKey = `part${previewCurrentPart}` as keyof typeof readingModule.passageContent
+                            const currentPassage = readingModule.passageContent[partKey]
+                            
+                            if (currentPassage) {
+                              return (
+                                <div className="text-justify leading-relaxed">
+                                  <div 
+                                    className="text-sm"
+                                    style={{
+                                      lineHeight: '1.6',
+                                      fontSize: '14px',
+                                      fontFamily: 'system-ui, -apple-system, sans-serif'
+                                    }}
+                                    dangerouslySetInnerHTML={{ 
+                                      __html: currentPassage
+                                        .replace(/<p>/g, '<p class="mb-4" style="margin-bottom: 1rem;">')
+                                        .replace(/<p[^>]*><strong>([A-Z])\.<\/strong>/g, '<p class="mb-4" style="margin-bottom: 1rem;"><strong style="font-weight: bold; color: #111827;">$1.</strong>')
+                                        .replace(/<p[^>]*>([^<]*[A-Z]\.)/g, '<p class="mb-4" style="margin-bottom: 1rem;"><strong style="font-weight: bold; color: #111827;">$1</strong>')
+                                    }}
+                                  />
+                                </div>
+                              )
+                            } else {
+                              return (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                  <p className="text-sm text-yellow-800">
+                                    No passage content available for Part {previewCurrentPart}
+                                  </p>
+                                </div>
+                              )
+                            }
+                          })()}
+                        </div>
+                      ) : (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <h4 className="text-sm font-bold text-yellow-900 mb-2">No Reading Passage</h4>
+                          <p className="text-sm text-yellow-800">
+                            Reading passages have not been added to this module yet.
+                          </p>
+                          <p className="text-sm text-yellow-700 mt-2">
+                            To add reading content, please exit preview mode and use the Reading module editor.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
@@ -571,6 +681,293 @@ export default function CreateMockTest() {
     )
   }
 
+  // Render listening preview
+  const renderListeningPreview = (listeningModule: any) => {
+    const currentPartQuestions = getQuestionsForPart(previewCurrentPart)
+    const totalParts = getTotalParts()
+    
+    return (
+      <FullscreenGuard>
+        <div className="h-screen flex flex-col bg-white">
+          {/* Header */}
+          <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">IELTS</span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Rem Candidate - 278228</span>
+                  <span className="ml-2">{formatTime(timeRemaining)} remaining</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={() => setPreviewMode(false)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Exit Preview
+              </button>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Pane - Audio Player */}
+            <div className="w-1/2 border-r border-gray-200 flex flex-col">
+              <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                <div className="text-sm font-medium text-gray-700">
+                  <span className="font-bold">Part {previewCurrentPart}</span> Listening Audio
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <h3 className="text-sm font-bold text-blue-900 mb-2">Instructions</h3>
+                  <div className="text-sm text-blue-800 space-y-2">
+                    <p>• Listen to the audio recording carefully</p>
+                    <p>• Answer the questions on the right as you listen</p>
+                    <p>• You will hear the recording only once</p>
+                    <p>• Choose the best answer for each question</p>
+                  </div>
+                </div>
+
+                {/* Audio Player */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  {listeningModule.audioUrl ? (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold mb-4">Listening Audio - Part {previewCurrentPart}</h3>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <audio controls className="w-full">
+                          <source src={listeningModule.audioUrl} type="audio/mpeg" />
+                          Your browser does not support the audio element.
+                        </audio>
+                        <p className="text-sm text-gray-600 mt-2">
+                          Audio file: {listeningModule.audioUrl.split('/').pop()}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h4 className="text-sm font-bold text-yellow-900 mb-2">No Audio File</h4>
+                      <p className="text-sm text-yellow-800">
+                        No audio file has been uploaded for this listening module.
+                      </p>
+                      <p className="text-sm text-yellow-700 mt-2">
+                        To add audio content, please exit preview mode and use the Listening module editor.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Pane - Answer Sheet */}
+            <div className="w-1/2 flex flex-col">
+              <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-gray-700">
+                      Part {previewCurrentPart} - Answer Sheet
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Questions 1-{currentPartQuestions.length}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setPreviewCurrentPart(Math.max(1, previewCurrentPart - 1))}
+                      disabled={previewCurrentPart <= 1}
+                      className="px-2 py-1 text-xs bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+                    >
+                      ← Prev
+                    </button>
+                    <span className="text-xs text-gray-600">
+                      {previewCurrentPart} of {totalParts}
+                    </span>
+                    <button
+                      onClick={() => setPreviewCurrentPart(Math.min(totalParts, previewCurrentPart + 1))}
+                      disabled={previewCurrentPart >= totalParts}
+                      className="px-2 py-1 text-xs bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {currentPartQuestions.length > 0 ? (
+                  <div className="space-y-6">
+                    {currentPartQuestions.map((question, index) => (
+                      <div key={question.id} className="relative">
+                        <IELTSQuestionRenderer
+                          question={{
+                            ...question,
+                            id: question.id,
+                            type: question.type as any,
+                            content: question.content,
+                            options: question.options,
+                            correctAnswer: question.correctAnswer,
+                            points: question.points,
+                            part: question.part || 1,
+                            fibData: question.fibData,
+                            matchingData: question.matchingData,
+                            notesCompletionData: question.notesCompletionData,
+                            summaryCompletionData: question.summaryCompletionData,
+                            trueFalseNotGivenData: question.trueFalseNotGivenData,
+                            instructions: question.instructions
+                          }}
+                          questionNumber={index + 1}
+                          onAnswerChange={(questionId, answer) => {
+                            console.log('Preview answer change:', { questionId, answer })
+                            handleAnswerChange(index + 1, typeof answer === 'string' ? answer : JSON.stringify(answer))
+                          }}
+                          initialAnswer={answers[index + 1] || ''}
+                          disabled={false}
+                          showInstructions={false}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-gray-500 text-lg mb-2">No Questions</div>
+                      <div className="text-gray-400 text-sm">
+                        No questions found for Part {previewCurrentPart}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Navigation */}
+          <footer className="border-t border-gray-200 bg-white px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-sm">Part {previewCurrentPart}</span>
+                  <span className="text-gray-500">•</span>
+                  <span className="text-sm text-gray-600">
+                    {currentPartQuestions.length} questions
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-gray-600">
+                  {formatTime(timeRemaining)} remaining
+                </div>
+                <button
+                  onClick={() => setPreviewMode(false)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                >
+                  Exit Preview
+                </button>
+              </div>
+            </div>
+          </footer>
+        </div>
+      </FullscreenGuard>
+    )
+  }
+
+  // Render writing preview
+  const renderWritingPreview = (writingModule: any) => {
+    return (
+      <FullscreenGuard>
+        <div className="h-screen flex flex-col bg-white">
+          {/* Header */}
+          <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">IELTS</span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Rem Candidate - 278228</span>
+                  <span className="ml-2">{formatTime(timeRemaining)} remaining</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={() => setPreviewMode(false)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Exit Preview
+              </button>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-bold text-blue-900 mb-4">Writing Task Instructions</h3>
+                <div className="text-sm text-blue-800 space-y-3">
+                  <p>• You will be given two writing tasks to complete</p>
+                  <p>• Task 1: Write at least 150 words (20 minutes recommended)</p>
+                  <p>• Task 2: Write at least 250 words (40 minutes recommended)</p>
+                  <p>• Use formal academic language</p>
+                  <p>• Organize your ideas clearly with paragraphs</p>
+                </div>
+              </div>
+
+              <div className="space-y-8">
+                {/* Task 1 */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-lg font-bold mb-4">Writing Task 1</h3>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-4">
+                      <strong>Sample Task 1:</strong> The chart below shows the percentage of households with internet access in different countries from 2000 to 2010. Summarize the information by selecting and reporting the main features, and make comparisons where relevant.
+                    </p>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Note:</strong> This is a preview. Actual writing tasks will be provided when students take the test.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Task 2 */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-lg font-bold mb-4">Writing Task 2</h3>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-4">
+                      <strong>Sample Task 2:</strong> Some people believe that technology has made our lives more complicated, while others think it has made life easier. Discuss both views and give your own opinion.
+                    </p>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Note:</strong> This is a preview. Actual writing tasks will be provided when students take the test.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <footer className="border-t border-gray-200 bg-white px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Writing Module - Manual Assessment Required
+              </div>
+              <button
+                onClick={() => setPreviewMode(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Exit Preview
+              </button>
+            </div>
+          </footer>
+        </div>
+      </FullscreenGuard>
+    )
+  }
+
   if (previewMode) {
     return renderPreviewMode()
   }
@@ -584,8 +981,20 @@ export default function CreateMockTest() {
             <p className="mt-2 text-gray-600">Build a comprehensive IELTS mock test</p>
           </div>
           <div className="flex space-x-3">
+            {/* Debug info */}
+            <div className="text-xs text-gray-500">
+              Title: {mockData.title ? '✓' : '✗'} | Modules: {mockData.modules.length}
+            </div>
             <button
-              onClick={() => setPreviewMode(true)}
+              onClick={() => {
+                console.log('Preview button clicked:', {
+                  mockData,
+                  title: mockData.title,
+                  modulesLength: mockData.modules.length,
+                  modules: mockData.modules
+                })
+                setPreviewMode(true)
+              }}
               disabled={!mockData.title || mockData.modules.length === 0}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -680,11 +1089,31 @@ export default function CreateMockTest() {
           )}
 
           {currentStep === 2 && (
-            <DragDropBuilder
-              moduleType="LISTENING"
-              onQuestionsChange={(questions) => handleQuestionsChange('LISTENING', questions as any)}
-              initialQuestions={mockData.modules.find(m => m.type === 'LISTENING')?.questions || []}
-            />
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Listening Module - IELTS Format</h3>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setCurrentModule('LISTENING')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium ${
+                      currentModule === 'LISTENING' 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    IELTS Listening Questions
+                  </button>
+                </div>
+              </div>
+              
+              <IELTSListeningBuilder
+                moduleType="LISTENING"
+                onQuestionsChange={(questions) => handleQuestionsChange('LISTENING', questions as any)}
+                onAudioFileChange={handleAudioUrlChange}
+                initialQuestions={mockData.modules.find(m => m.type === 'LISTENING')?.questions || []}
+                initialAudioUrl={mockData.modules.find(m => m.type === 'LISTENING')?.audioUrl || ''}
+              />
+            </div>
           )}
 
           {currentStep === 3 && (
@@ -709,8 +1138,10 @@ export default function CreateMockTest() {
                 moduleType="READING"
                 onQuestionsChange={(questions) => handleQuestionsChange('READING', questions as any)}
                 onPartContentChange={handlePartContentChange}
+                onPassageContentChange={handlePassageContentChange}
                 initialQuestions={mockData.modules.find(m => m.type === 'READING')?.questions || []}
                 initialPartContent={mockData.modules.find(m => m.type === 'READING')?.partContent || { part1: '', part2: '', part3: '' }}
+                initialPassageContent={mockData.modules.find(m => m.type === 'READING')?.passageContent || { part1: '', part2: '', part3: '' }}
               />
             </div>
           )}

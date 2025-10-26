@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { AssignmentStatus } from '@prisma/client'
 import { scoreReading } from '@/lib/scoring/auto-scorer'
 import { calculateReadingBand } from '@/lib/scoring/band-calculator'
+import { calculateAndStoreResults } from '@/lib/scoring/result-calculator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,7 +87,9 @@ export async function POST(request: NextRequest) {
       
       return {
         questionId: q.id,
-        answer: (q.questionBank.contentJson as any).correctAnswer || '',
+        answer: typeof q.correctAnswerJson === 'string' ? q.correctAnswerJson : 
+                Array.isArray(q.correctAnswerJson) ? q.correctAnswerJson.map(String) : 
+                String(q.correctAnswerJson || ''),
         type: mappedType as 'MCQ' | 'FIB' | 'MATCHING' | 'TRUE_FALSE' | 'NOT_GIVEN'
       }
     })
@@ -117,6 +120,14 @@ export async function POST(request: NextRequest) {
           autoScore: bandScore
         }
       })
+    }
+
+    // Calculate and store overall results
+    try {
+      await calculateAndStoreResults(assignment.id)
+    } catch (error) {
+      console.error('Error calculating results:', error)
+      // Don't fail the submission if result calculation fails
     }
 
     return NextResponse.json({

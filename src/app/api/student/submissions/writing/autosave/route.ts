@@ -3,16 +3,14 @@ import { prisma } from '@/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, answers, currentTask } = await request.json()
+    const body = await request.json()
+    const { token, answers, timeSpent } = body
 
-    if (!token || !answers) {
-      return NextResponse.json(
-        { error: 'Token and answers are required' },
-        { status: 400 }
-      )
+    if (!token) {
+      return NextResponse.json({ error: 'Token is required' }, { status: 400 })
     }
 
-    // Find assignment
+    // Find assignment by token
     const assignment = await prisma.assignment.findUnique({
       where: { tokenHash: token },
       include: {
@@ -27,32 +25,26 @@ export async function POST(request: NextRequest) {
     })
 
     if (!assignment) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Invalid token' }, { status: 404 })
     }
 
     const writingModule = assignment.mock.modules[0]
     if (!writingModule) {
-      return NextResponse.json(
-        { error: 'Writing module not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Writing module not found' }, { status: 404 })
     }
 
     // Check if submission already exists
-    const existingSubmission = await prisma.submission.findFirst({
+    let submission = await prisma.submission.findFirst({
       where: {
         assignmentId: assignment.id,
         moduleId: writingModule.id
       }
     })
 
-    if (existingSubmission) {
+    if (submission) {
       // Update existing submission
       await prisma.submission.update({
-        where: { id: existingSubmission.id },
+        where: { id: submission.id },
         data: {
           answersJson: answers
         }
@@ -69,14 +61,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Auto-saved successfully'
-    })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Writing auto-save error:', error)
+    console.error('Autosave error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to autosave' },
       { status: 500 }
     )
   }

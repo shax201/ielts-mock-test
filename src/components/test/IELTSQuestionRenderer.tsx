@@ -110,11 +110,6 @@ export default function IELTSQuestionRenderer({
 
     return (
       <div className="space-y-4">
-        {showInstructions && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800">{question.notesCompletionData.instructions}</p>
-          </div>
-        )}
         
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h3 className="text-lg font-bold text-center mb-6 uppercase tracking-wide">
@@ -144,24 +139,25 @@ export default function IELTSQuestionRenderer({
   }
 
   const renderSummaryCompletion = () => {
-    if (!question.summaryCompletionData) return null
+    // Handle both structured data and simple content formats
+    const content = question.summaryCompletionData?.content || question.content || ''
+    const title = question.summaryCompletionData?.title || 'Summary Completion'
+    
+    if (!content) return null
 
     return (
       <div className="space-y-4">
-        {showInstructions && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800">{question.summaryCompletionData.instructions}</p>
-          </div>
-        )}
         
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h3 className="text-lg font-bold text-center mb-6 uppercase tracking-wide">
-            {question.summaryCompletionData.title}
+            {title}
           </h3>
           
           <div className="text-sm leading-relaxed">
-            {question.summaryCompletionData.content.split(/(\[\d+\])/).map((part, index) => {
+            {content.split(/(\[\d+\]|_____+)/).map((part, index) => {
               const blankMatch = part.match(/\[(\d+)\]/)
+              const underscoreMatch = part.match(/^(_+)$/)
+              
               if (blankMatch) {
                 const blankNumber = parseInt(blankMatch[1])
                 return (
@@ -176,8 +172,21 @@ export default function IELTSQuestionRenderer({
                     />
                   </span>
                 )
+              } else if (underscoreMatch) {
+                return (
+                  <span key={index} className="inline-block">
+                    <input
+                      type="text"
+                      value={typeof localAnswer === 'string' ? localAnswer : ''}
+                      onChange={(e) => handleAnswerChange(e.target.value)}
+                      disabled={disabled}
+                      className="w-16 h-6 border border-gray-300 rounded px-1 text-xs mx-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Answer"
+                    />
+                  </span>
+                )
               }
-              return part
+              return <span key={index}>{part}</span>
             })}
           </div>
         </div>
@@ -186,20 +195,8 @@ export default function IELTSQuestionRenderer({
   }
 
   const renderTrueFalseNotGiven = () => {
-    console.log('Rendering TRUE_FALSE_NOT_GIVEN:', {
-      questionType: question.type,
-      hasTrueFalseNotGivenData: !!question.trueFalseNotGivenData,
-      trueFalseNotGivenData: question.trueFalseNotGivenData,
-      content: question.content
-    })
-    
     return (
       <div className="space-y-4">
-        {showInstructions && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800">Choose the correct answer.</p>
-          </div>
-        )}
         
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="text-sm mb-4">
@@ -230,11 +227,6 @@ export default function IELTSQuestionRenderer({
   const renderTrueFalse = () => {
     return (
       <div className="space-y-4">
-        {showInstructions && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800">Choose the correct answer.</p>
-          </div>
-        )}
         
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="text-sm mb-4">
@@ -265,11 +257,6 @@ export default function IELTSQuestionRenderer({
   const renderMultipleChoice = () => {
     return (
       <div className="space-y-4">
-        {showInstructions && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800">Choose the correct answer.</p>
-          </div>
-        )}
         
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="text-sm mb-4">
@@ -298,22 +285,21 @@ export default function IELTSQuestionRenderer({
   }
 
   const renderFillInTheBlank = () => {
-    if (!question.fibData) return null
+    // Handle both fibData and simple content formats
+    const content = question.fibData?.content || question.content || ''
+    
+    if (!content) return null
 
     return (
       <div className="space-y-4">
-        {showInstructions && question.fibData.instructions && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800">{question.fibData.instructions}</p>
-          </div>
-        )}
         
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="text-sm leading-relaxed">
-            {question.fibData.content.split(/(\[BLANK_\d+\])/).map((part, index) => {
+            {content.split(/(\[BLANK_\d+\]|_____+)/).map((part, index) => {
               const blankMatch = part.match(/\[BLANK_(\d+)\]/)
-              if (blankMatch) {
-                const blankNumber = parseInt(blankMatch[1])
+              const underscoreMatch = part.match(/^(_+)$/)
+              
+              if (blankMatch || underscoreMatch) {
                 return (
                   <span key={index} className="inline-block">
                     <input
@@ -321,13 +307,19 @@ export default function IELTSQuestionRenderer({
                       value={typeof localAnswer === 'string' ? localAnswer : ''}
                       onChange={(e) => handleAnswerChange(e.target.value)}
                       disabled={disabled}
-                      className="w-20 h-6 border border-gray-300 rounded px-2 text-sm mx-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder={`${blankNumber}`}
+                      className="inline-block border-2 border-dashed border-gray-400 bg-gray-50 px-3 py-2 rounded text-center min-w-24 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200 hover:border-gray-500"
+                      placeholder="Answer"
+                      style={{
+                        margin: '0 4px',
+                        verticalAlign: 'middle',
+                        fontFamily: 'inherit',
+                        fontSize: 'inherit'
+                      }}
                     />
                   </span>
                 )
               }
-              return part
+              return <span key={index}>{part}</span>
             })}
           </div>
         </div>
@@ -340,11 +332,6 @@ export default function IELTSQuestionRenderer({
 
     return (
       <div className="space-y-4">
-        {showInstructions && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-800">Match the items on the left with the items on the right.</p>
-          </div>
-        )}
         
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="grid grid-cols-2 gap-6">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyJWT, hasRole } from '@/lib/auth/jwt'
 import { prisma } from '@/lib/db'
 import { UserRole, ModuleType } from '@prisma/client'
+import { ModuleDataService } from '@/lib/services/module-data-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { title, description, modules, isDraft } = await request.json()
+    const { title, description, modules, isDraft, moduleData } = await request.json()
 
     if (!title || !modules || !Array.isArray(modules)) {
       return NextResponse.json(
@@ -85,6 +86,13 @@ export async function POST(request: NextRequest) {
         const module = modules[moduleIndex]
         
         // Create the module
+        console.log(`Creating module ${moduleIndex + 1}:`, {
+          type: module.type,
+          audioUrl: module.audioUrl,
+          hasAudioUrl: !!module.audioUrl,
+          audioUrlLength: module.audioUrl?.length || 0
+        })
+        
         const createdModule = await tx.mockModule.create({
           data: {
             mockId: createdMock.id,
@@ -93,8 +101,11 @@ export async function POST(request: NextRequest) {
             audioUrl: module.audioUrl || null,
             instructions: module.instructions || '',
             order: moduleIndex + 1,
+            passageContent: module.passageContent || null,
           }
         })
+        
+        console.log(`Module ${moduleIndex + 1} created with audioUrl:`, createdModule.audioUrl)
 
         // Create questions for this module
         if (module.questions && module.questions.length > 0) {
@@ -110,7 +121,8 @@ export async function POST(request: NextRequest) {
                   options: question.options || [],
                   fibData: question.fibData || null,
                   instructions: question.instructions || '',
-                  type: question.type || 'MCQ'
+                  type: question.type || 'MCQ',
+                  part: question.part || 1
                 },
                 reusable: false
               }
@@ -128,6 +140,48 @@ export async function POST(request: NextRequest) {
             })
           }
         }
+
+        // Create module-specific data if provided
+        if (moduleData && moduleData[moduleIndex]) {
+          const data = moduleData[moduleIndex]
+          if (module.type === ModuleType.READING && data.readingData) {
+            await tx.readingModuleData.create({
+              data: {
+                moduleId: createdModule.id,
+                part1Content: data.readingData.part1Content || null,
+                part2Content: data.readingData.part2Content || null,
+                part3Content: data.readingData.part3Content || null,
+                part1Passage: data.readingData.part1Passage || null,
+                part2Passage: data.readingData.part2Passage || null,
+                part3Passage: data.readingData.part3Passage || null,
+                part1Instructions: data.readingData.part1Instructions || null,
+                part2Instructions: data.readingData.part2Instructions || null,
+                part3Instructions: data.readingData.part3Instructions || null
+              }
+            })
+          } else if (module.type === ModuleType.LISTENING && data.listeningData) {
+            await tx.listeningModuleData.create({
+              data: {
+                moduleId: createdModule.id,
+                audioUrl: data.listeningData.audioUrl || null,
+                audioPublicId: data.listeningData.audioPublicId || null,
+                audioDuration: data.listeningData.audioDuration || null,
+                part1Content: data.listeningData.part1Content || null,
+                part2Content: data.listeningData.part2Content || null,
+                part3Content: data.listeningData.part3Content || null,
+                part1Instructions: data.listeningData.part1Instructions || null,
+                part2Instructions: data.listeningData.part2Instructions || null,
+                part3Instructions: data.listeningData.part3Instructions || null,
+                part1AudioStart: data.listeningData.part1AudioStart || null,
+                part1AudioEnd: data.listeningData.part1AudioEnd || null,
+                part2AudioStart: data.listeningData.part2AudioStart || null,
+                part2AudioEnd: data.listeningData.part2AudioEnd || null,
+                part3AudioStart: data.listeningData.part3AudioStart || null,
+                part3AudioEnd: data.listeningData.part3AudioEnd || null
+              }
+            })
+          }
+        }
       }
 
       // Return the created mock with all relations
@@ -140,7 +194,9 @@ export async function POST(request: NextRequest) {
                 include: {
                   questionBank: true
                 }
-              }
+              },
+              readingData: true,
+              listeningData: true
             }
           }
         }

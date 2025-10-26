@@ -47,18 +47,15 @@ export default function Timer({ timeRemaining, onTimeUp }: TimerProps) {
   }
 
   return (
-    <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-      isWarning ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+    <div className={`flex items-center space-x-1 text-sm ${
+      isWarning ? 'text-red-600' : 'text-gray-500'
     }`}>
-      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <span className="font-mono text-lg font-semibold">
-        {formatTime(displayTime)}
+      <span className="font-mono">
+        {formatTime(displayTime)} remaining
       </span>
       {isWarning && (
-        <span className="text-sm font-medium animate-pulse">
-          Time Warning!
+        <span className="text-xs font-medium animate-pulse ml-2">
+          !
         </span>
       )}
     </div>

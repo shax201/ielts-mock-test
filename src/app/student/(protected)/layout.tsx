@@ -19,6 +19,7 @@ export default function StudentProtectedLayout({
   const [loading, setLoading] = useState(true)
   const [activeAssignments, setActiveAssignments] = useState<Array<{ id: string; title: string; token: string; validUntil?: string }>>([])
   const [isTestsOpen, setIsTestsOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -67,27 +68,34 @@ export default function StudentProtectedLayout({
     loadAssignments()
   }, [])
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isTestsOpen) {
-        const target = event.target as Element
-        if (!target.closest('.relative')) {
-          setIsTestsOpen(false)
-        }
+      const target = event.target as Element
+      
+      if (isTestsOpen && !target.closest('.tests-dropdown')) {
+        setIsTestsOpen(false)
+      }
+      
+      if (isProfileOpen && !target.closest('.profile-dropdown')) {
+        setIsProfileOpen(false)
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isTestsOpen])
+  }, [isTestsOpen, isProfileOpen])
 
   const handleLogout = async () => {
     try {
       await fetch('/api/student/auth/logout', { method: 'POST' })
+      setStudent(null)
+      setIsProfileOpen(false)
       router.push('/student/login')
     } catch (error) {
       console.error('Error during logout:', error)
+      // Still redirect to login even if logout API fails
+      router.push('/student/login')
     }
   }
 
@@ -102,71 +110,191 @@ export default function StudentProtectedLayout({
   if (!student) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gray-100">
+      {/* Logo Section */}
+      <div className="bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/student" className="flex-shrink-0">
-                <h1 className="text-xl font-bold text-blue-600">IELTS Student Portal</h1>
-              </Link>
-              <div className="hidden md:ml-6 md:flex md:space-x-8">
-                <Link href="/student" className={`px-3 py-2 rounded-md text-sm font-medium ${pathname === '/student' ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>Dashboard</Link>
-                <Link href="/student/results" className={`px-3 py-2 rounded-md text-sm font-medium ${pathname?.startsWith('/student/results') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>My Results</Link>
-                <Link href="/student/tests" className={`px-3 py-2 rounded-md text-sm font-medium ${pathname?.startsWith('/student/tests') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>Test History</Link>
-                {/* Start Test dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setIsTestsOpen(v => !v)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        setIsTestsOpen(v => !v)
-                      }
-                    }}
-                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    aria-expanded={isTestsOpen}
-                    aria-haspopup="true"
-                  >
-                    Start Test
-                    <span className="ml-1">▾</span>
-                  </button>
-                  {isTestsOpen && (
-                    <div className="absolute z-50 mt-2 w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5" role="menu">
-                      <div className="py-1 max-h-80 overflow-auto">
-                        {activeAssignments.length > 0 ? (
-                          activeAssignments.map((item, index) => {
-                            // Safety check for item object
-                            if (!item || typeof item !== 'object' || !item.id) {
-                              return null
-                            }
-                            return (
-                              <Link
-                                key={item.id || index}
-                                href={`/test/${item.token || ''}`}
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                onClick={() => setIsTestsOpen(false)}
-                              >
-                                {item.title || 'Untitled Test'}
-                              </Link>
-                            )
-                          })
-                        ) : (
-                          <span className="block px-4 py-2 text-sm text-gray-400">No active tests</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
+          <div className="flex items-center py-4">
+            <Link href="/student" className="flex items-center space-x-3">
+              {/* RADIANCE Logo */}
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">R</span>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-red-500 to-red-700 bg-clip-text text-transparent">
+                    RADIANCE
+                  </h1>
+                  <p className="text-sm text-gray-500 -mt-1">A Touch of Quality Education</p>
+                  <p className="text-lg font-bold text-red-600 -mt-1">EDUCATION</p>
                 </div>
               </div>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Bar */}
+      <nav className="bg-[#2F404B] shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-14">
+            <div className="flex items-center space-x-8">
+              <Link 
+                href="/student" 
+                className={`px-4 py-3 text-sm font-medium transition-colors ${
+                  pathname === '/student' 
+                    ? 'bg-[#4A8FB1] text-white' 
+                    : 'text-white hover:text-gray-200'
+                }`}
+              >
+                Dashboard
+              </Link>
+              <Link 
+                href="/student/tests" 
+                className={`px-4 py-3 text-sm font-medium transition-colors ${
+                  pathname?.startsWith('/student/tests') 
+                    ? 'bg-[#4A8FB1] text-white' 
+                    : 'text-white hover:text-gray-200'
+                }`}
+              >
+                Online Tests
+              </Link>
+              <Link 
+                href="/student/assignments" 
+                className={`px-4 py-3 text-sm font-medium transition-colors ${
+                  pathname?.startsWith('/student/assignments') 
+                    ? 'bg-[#4A8FB1] text-white' 
+                    : 'text-white hover:text-gray-200'
+                }`}
+              >
+                Assigned Test
+              </Link>
+              <Link 
+                href="/student/participation-history" 
+                className={`px-4 py-3 text-sm font-medium transition-colors ${
+                  pathname?.startsWith('/student/participation-history') 
+                    ? 'bg-[#4A8FB1] text-white' 
+                    : 'text-white hover:text-gray-200'
+                }`}
+              >
+                Test History
+              </Link>
+              <Link 
+                href="/student/courses" 
+                className={`px-4 py-3 text-sm font-medium transition-colors ${
+                  pathname?.startsWith('/student/courses') 
+                    ? 'bg-[#4A8FB1] text-white' 
+                    : 'text-white hover:text-gray-200'
+                }`}
+              >
+                Assigned Courses
+              </Link>
+              <Link 
+                href="/student/sessions" 
+                className={`px-4 py-3 text-sm font-medium transition-colors ${
+                  pathname?.startsWith('/student/sessions') 
+                    ? 'bg-[#4A8FB1] text-white' 
+                    : 'text-white hover:text-gray-200'
+                }`}
+              >
+                Online Sessions
+              </Link>
+              <Link 
+                href="/student/ebooks" 
+                className={`px-4 py-3 text-sm font-medium transition-colors ${
+                  pathname?.startsWith('/student/ebooks') 
+                    ? 'bg-[#4A8FB1] text-white' 
+                    : 'text-white hover:text-gray-200'
+                }`}
+              >
+                EBooks
+              </Link>
+              {/* Learning Tools Dropdown */}
+              <div className="relative tests-dropdown">
+                <button
+                  onClick={() => setIsTestsOpen(v => !v)}
+                  className="flex items-center px-4 py-3 text-sm font-medium text-white hover:text-gray-200 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6" />
+                  </svg>
+                  Learning Tools
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isTestsOpen && (
+                  <div className="absolute z-50 mt-2 w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5" role="menu">
+                    <div className="py-1 max-h-80 overflow-auto">
+                      {activeAssignments.length > 0 ? (
+                        activeAssignments.map((item, index) => {
+                          if (!item || typeof item !== 'object' || !item.id) {
+                            return null
+                          }
+                          return (
+                            <Link
+                              key={item.id || index}
+                              href={`/test/${item.token || ''}`}
+                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                              onClick={() => setIsTestsOpen(false)}
+                            >
+                              {item.title || 'Untitled Test'}
+                            </Link>
+                          )
+                        })
+                      ) : (
+                        <span className="block px-4 py-2 text-sm text-gray-400">No active tests</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">Welcome, {student.name}</span>
-              <button onClick={handleLogout} className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Logout</button>
+            
+            {/* User Profile Dropdown */}
+            <div className="flex items-center profile-dropdown">
+              <div className="relative">
+                <button 
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center space-x-2 text-white hover:text-gray-200 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-purple-400 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  </div>
+                  <span className="text-sm text-white hidden sm:block">{student.name}</span>
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                    <div className="py-1" role="menu">
+                      <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
+                        <div className="font-medium">{student.name}</div>
+                        <div className="text-gray-500">{student.email}</div>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        role="menuitem"
+                      >
+                        <svg className="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </nav>
+      
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">{children}</main>
     </div>
   )

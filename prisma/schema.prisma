@@ -88,6 +88,7 @@ model MockModule {
   audioUrl      String?    @map("audio_url")
   instructions  String?
   order         Int
+  passageContent Json?     @map("passage_content")
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
@@ -95,6 +96,8 @@ model MockModule {
   mock       Mock          @relation(fields: [mockId], references: [id], onDelete: Cascade)
   questions  MockQuestion[]
   submissions Submission[]
+  readingData ReadingModuleData?
+  listeningData ListeningModuleData?
 
   @@map("mock_modules")
 }
@@ -241,4 +244,54 @@ model PDFReport {
   result Result @relation(fields: [resultId], references: [id], onDelete: Cascade)
 
   @@map("pdf_reports")
+}
+
+// Reading Module Data - Stores reading-specific content and passages
+model ReadingModuleData {
+  id              String   @id @default(cuid())
+  moduleId        String   @unique @map("module_id")
+  part1Content    String?  @map("part1_content")
+  part2Content    String?  @map("part2_content")
+  part3Content    String?  @map("part3_content")
+  part1Passage    String?  @map("part1_passage")
+  part2Passage    String?  @map("part2_passage")
+  part3Passage    String?  @map("part3_passage")
+  part1Instructions String? @map("part1_instructions")
+  part2Instructions String? @map("part2_instructions")
+  part3Instructions String? @map("part3_instructions")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  module MockModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@map("reading_module_data")
+}
+
+// Listening Module Data - Stores listening-specific content and audio information
+model ListeningModuleData {
+  id              String   @id @default(cuid())
+  moduleId        String   @unique @map("module_id")
+  audioUrl        String?  @map("audio_url")
+  audioPublicId   String?  @map("audio_public_id")
+  audioDuration   Int?     @map("audio_duration")
+  part1Content    String?  @map("part1_content")
+  part2Content    String?  @map("part2_content")
+  part3Content    String?  @map("part3_content")
+  part1Instructions String? @map("part1_instructions")
+  part2Instructions String? @map("part2_instructions")
+  part3Instructions String? @map("part3_instructions")
+  part1AudioStart  Int?     @map("part1_audio_start")
+  part1AudioEnd    Int?     @map("part1_audio_end")
+  part2AudioStart  Int?     @map("part2_audio_start")
+  part2AudioEnd    Int?     @map("part2_audio_end")
+  part3AudioStart  Int?     @map("part3_audio_start")
+  part3AudioEnd    Int?     @map("part3_audio_end")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  module MockModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@map("listening_module_data")
 }
