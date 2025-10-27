@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
+import { signJWT } from '@/lib/auth/jwt'
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,16 +39,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create JWT token
-    const token = jwt.sign(
-      {
-        userId: student.id,
-        email: student.email,
-        role: student.role,
-        name: student.name || 'Student'
-      },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '7d' }
-    )
+    const token = await signJWT({
+      userId: student.id,
+      email: student.email,
+      role: student.role
+    })
 
     // Set cookie
     const response = NextResponse.json({

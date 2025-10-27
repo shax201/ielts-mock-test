@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://neondb_owner:npg_s0i7MxjcIhCd@ep-late-dust-a17jlpvf-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -60,6 +60,8 @@ model User {
   assignments      Assignment[]
   instructorMarks  InstructorMark[]
   writingFeedback  WritingFeedback[]
+  remedialSessions RemedialTestSession[]
+  remedialTemplates RemedialTestTemplate[]
 
   @@map("users")
 }
@@ -76,6 +78,7 @@ model Mock {
   creator     User         @relation("MockCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   modules     MockModule[]
   assignments Assignment[]
+  remedialTemplates RemedialTestTemplate[]
 
   @@map("mocks")
 }
@@ -294,4 +297,50 @@ model ListeningModuleData {
   module MockModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   @@map("listening_module_data")
+}
+
+// Remedial Test Session - Tracks student remedial test sessions
+model RemedialTestSession {
+  id        String   @id @default(cuid())
+  studentId String   @map("student_id")
+  templateId String? @map("template_id")
+  testType  String   @map("test_type")
+  status    String   @default("ACTIVE")
+  answers   Json?
+  score     Int?
+  startedAt DateTime @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  template RemedialTestTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@map("remedial_test_sessions")
+}
+
+// Remedial Test Template - Templates for creating remedial tests
+model RemedialTestTemplate {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  type        String   // MATCHING_HEADINGS, INFORMATION_MATCHING, etc.
+  module      String   // READING, LISTENING, etc.
+  difficulty  String   @default("INTERMEDIATE") // BEGINNER, INTERMEDIATE, ADVANCED
+  duration    Int      @default(20) // in minutes
+  questions   Json     // Question data
+  mockTestId  String?  @map("mock_test_id") // Link to specific mock test
+  isActive    Boolean  @default(true)
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  mockTest Mock? @relation(fields: [mockTestId], references: [id], onDelete: SetNull)
+  sessions RemedialTestSession[]
+
+  @@map("remedial_test_templates")
 }

@@ -1,159 +1,202 @@
-# Mock Test Management Scripts
+# IELTS Mock Test System - Scripts
 
-This directory contains scripts for managing mock tests and sample data in the IELTS Mock Test application.
+This directory contains various scripts to set up and manage the IELTS Mock Test System.
 
-## Available Scripts
+## 🚀 Quick Start
 
-### 1. Reset and Seed Basic Mock Test
+### Complete System Setup
 ```bash
-npm run mock:reset
+npm run setup:complete
 ```
+This will:
+- Clear all existing data
+- Create a comprehensive mock test with all question types
+- Create 5 remedial test templates linked to the mock test
+- Set up admin user
 
-**What it does:**
-- Clears all existing mock tests and questions
-- Creates a basic mock test with sample listening and reading questions
-- Creates an admin user if none exists
-- Perfect for development and testing
+## 📝 Individual Scripts
 
-**Sample Data Created:**
-- 1 Mock Test with 2 modules (Listening & Reading)
-- 3 Listening questions (Multiple Choice, Notes Completion, True/False/Not Given)
-- 4 Reading questions (Multiple Choice, Fill in Blank, True/False/Not Given, Summary Completion)
-- ⚠️ **Note**: Reading part content (passages) must be added manually via the admin panel
+### Mock Test Scripts
 
-### 2. Create Comprehensive Mock Test
+#### Create Comprehensive Mock Test
 ```bash
 npm run mock:comprehensive
 ```
+Creates a complete IELTS Academic mock test with:
+- Listening module (6 questions)
+- Reading module (8 questions) 
+- Writing module (manual tasks)
+- All question types: Multiple Choice, Fill-in-Blank, True/False/Not Given, Notes Completion, Summary Completion
 
-**What it does:**
-- Clears all existing mock tests and questions
-- Creates a comprehensive mock test with all modules
-- Includes more diverse question types
-- Better for production-like testing
-
-**Sample Data Created:**
-- 1 Mock Test with 4 modules (Listening, Reading, Writing, Speaking)
-- 6 Listening questions across 3 parts
-- 8 Reading questions across 3 parts
-- Writing and Speaking modules (ready for manual content)
-- ⚠️ **Note**: Reading part content (passages) must be added manually via the admin panel
-
-## Script Features
-
-### ✅ **Data Management:**
-- **Safe Deletion**: Properly handles foreign key constraints
-- **User Management**: Creates admin user if needed
-- **Question Bank**: Creates reusable question bank entries
-- **Module Organization**: Proper module ordering and structure
-
-### ✅ **Question Types Supported:**
-- **Multiple Choice**: Standard A/B/C/D questions
-- **Fill in the Blank**: Text completion questions
-- **Notes Completion**: IELTS-specific format
-- **True/False/Not Given**: Reading comprehension
-- **Summary Completion**: Advanced reading tasks
-
-### ✅ **IELTS Structure:**
-- **Listening Module**: 40 minutes, 3 parts
-- **Reading Module**: 60 minutes, 3 parts
-- **Writing Module**: 60 minutes (manual tasks)
-- **Speaking Module**: 15 minutes (manual tasks)
-
-## Usage Examples
-
-### Development Setup
+#### Reset and Seed Mock Tests
 ```bash
-# Clear everything and create basic mock test
 npm run mock:reset
+```
+Clears all data and creates sample mock tests.
 
-# Start development server
+### Remedial Test Scripts
+
+#### Seed Remedial Tests
+```bash
+npm run remedial:seed
+```
+Creates 5 remedial test templates:
+- **Reading - Matching Headings Practice** (Intermediate)
+- **Reading - Information Matching Practice** (Intermediate)
+- **Listening - Multiple Choice Practice** (Intermediate)
+- **Reading - Fill in the Blank Practice** (Intermediate)
+- **Reading - True/False/Not Given Practice** (Advanced)
+
+### Database Scripts
+
+#### Database Migration
+```bash
+npm run db:migrate
+```
+Applies database schema changes.
+
+#### Seed Students
+```bash
+npm run db:seed:students
+```
+Creates sample student accounts.
+
+#### Reset Database
+```bash
+npm run db:reset
+```
+⚠️ **WARNING**: This will delete ALL data and reset the database.
+
+## 📊 Script Details
+
+### `create-comprehensive-mock-test.ts`
+- Creates a full IELTS Academic mock test
+- Includes all question types and modules
+- Generates realistic content for practice
+
+### `seed-remedial-tests.ts`
+- Creates remedial test templates linked to mock tests
+- Covers different question types and difficulty levels
+- Links to the comprehensive mock test created above
+
+### `setup-complete-system.ts`
+- **Recommended for first-time setup**
+- Combines mock test creation and remedial test seeding
+- Provides complete system initialization
+
+## 🔧 Prerequisites
+
+Before running any scripts:
+
+1. **Database Setup**:
+   ```bash
+   npm run db:migrate
+   ```
+
+2. **Environment Variables**:
+   Ensure your `.env` file has the correct database connection string.
+
+3. **Dependencies**:
+   ```bash
+   npm install
+   ```
+
+## 📋 Script Output
+
+### Mock Test Creation
+- Mock Test ID and details
+- Module information with question counts
+- Admin user creation
+
+### Remedial Test Seeding
+- Template creation confirmation
+- Link to parent mock test
+- Admin user information
+
+### Complete Setup
+- Summary of all created content
+- Access URLs for admin and student portals
+- Default credentials
+
+## 🎯 Usage Examples
+
+### First Time Setup
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Set up database
+npm run db:migrate
+
+# 3. Create complete system
+npm run setup:complete
+
+# 4. Start development server
 npm run dev
 ```
 
-### Production Testing
+### Adding More Remedial Tests
 ```bash
-# Create comprehensive mock test
-npm run mock:comprehensive
-
-# Run tests
-npm run test
+# After creating mock tests
+npm run remedial:seed
 ```
 
-### Database Management
+### Reset Everything
 ```bash
-# Reset entire database
+# Clear all data and start fresh
 npm run db:reset
-
-# Create comprehensive mock test
-npm run mock:comprehensive
+npm run setup:complete
 ```
 
-## File Structure
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Error**:
+   - Check your `.env` file
+   - Ensure database is running
+   - Run `npm run db:migrate`
+
+2. **Permission Errors**:
+   - Ensure you have write access to the database
+   - Check file permissions
+
+3. **Script Fails**:
+   - Check console output for specific errors
+   - Ensure all dependencies are installed
+   - Try running individual scripts to isolate issues
+
+### Getting Help
+
+- Check the console output for detailed error messages
+- Ensure all prerequisites are met
+- Verify database connectivity
+- Check file permissions and dependencies
+
+## 📁 File Structure
 
 ```
 scripts/
-├── reset-and-seed-mock-tests.ts      # Basic mock test creation
-├── create-comprehensive-mock-test.ts  # Comprehensive mock test
-├── seed-students.ts                  # Student user creation
-├── calculate-existing-scores.ts      # Score calculation utility
-├── test-auto-scoring.ts             # Auto-scoring test utility
-└── README.md                         # This documentation
+├── README.md                           # This file
+├── create-comprehensive-mock-test.ts   # Mock test creation
+├── seed-remedial-tests.ts             # Remedial test seeding
+├── setup-complete-system.ts           # Complete system setup
+├── seed-students.ts                   # Student account creation
+├── reset-and-seed-mock-tests.ts       # Reset and seed
+└── verify-part-storage.ts             # Verification script
 ```
 
-## Database Schema
+## 🎉 Success Indicators
 
-The scripts work with the following Prisma models:
-- `Mock` - Main mock test entity
-- `MockModule` - Test modules (Listening, Reading, etc.)
-- `MockQuestion` - Individual questions
-- `QuestionBank` - Reusable question content
-- `User` - Admin user for creation
+After running `npm run setup:complete`, you should see:
 
-## Error Handling
+- ✅ Mock test created with ID
+- ✅ 5 remedial test templates created
+- ✅ Admin user created
+- ✅ All modules and questions generated
+- ✅ System ready for use
 
-Both scripts include comprehensive error handling:
-- **Foreign Key Constraints**: Proper deletion order
-- **User Creation**: Handles existing admin users
-- **Database Connections**: Proper cleanup
-- **Validation**: Input validation and error messages
-
-## Customization
-
-You can modify the scripts to:
-- Add more question types
-- Change question content
-- Modify module durations
-- Add additional modules
-- Customize user creation
-
-## Troubleshooting
-
-### Common Issues:
-
-1. **Foreign Key Constraint Errors**
-   - Scripts handle this automatically
-   - Deletion order is: MockQuestion → MockModule → Mock → QuestionBank
-
-2. **User Creation Errors**
-   - Scripts check for existing admin users
-   - Creates dummy admin if none exists
-
-3. **Database Connection Issues**
-   - Ensure DATABASE_URL is set in .env
-   - Run `npm run db:generate` if needed
-
-### Debug Mode:
-```bash
-# Run with verbose output
-DEBUG=* npm run mock:reset
-```
-
-## Contributing
-
-When adding new scripts:
-1. Follow the existing pattern
-2. Include proper error handling
-3. Add documentation
-4. Test with clean database
-5. Update this README
+You can then access:
+- **Admin Panel**: `/admin` (admin@radiance.edu / admin123)
+- **Student Portal**: `/student`
+- **Remedial Tests**: `/admin/remedial-tests` and `/student/remedial-tests`

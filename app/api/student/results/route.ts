@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyJWT } from '@/lib/auth/jwt'
 import { prisma } from '@/lib/db'
-import jwt from 'jsonwebtoken'
 
 export async function GET(request: NextRequest) {
   try {
@@ -86,9 +86,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
+    const decoded = await verifyJWT(token)
 
-    if (decoded.role !== 'STUDENT') {
+    if (!decoded || decoded.role !== 'STUDENT') {
       return NextResponse.json(
         { error: 'Invalid user role' },
         { status: 403 }

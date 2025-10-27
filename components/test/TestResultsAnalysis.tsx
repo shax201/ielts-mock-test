@@ -9,6 +9,7 @@ interface TestResultsData {
   testDate: string
   candidateNumber: string
   studentName: string
+  mockTestId: string
   bandScores: {
     listening: number
     reading: number
@@ -56,12 +57,48 @@ interface TestResultsAnalysisProps {
   testId: string
 }
 
+interface RemedialTest {
+  id: string
+  title: string
+  description: string
+  type: string
+  module: string
+  difficulty: string
+  duration: number
+  questions: any[]
+  mockTest?: {
+    id: string
+    title: string
+    description: string
+  }
+}
+
 export default function TestResultsAnalysis({ testId }: TestResultsAnalysisProps) {
   const [loading, setLoading] = useState(true)
   const [results, setResults] = useState<TestResultsData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [remedialTests, setRemedialTests] = useState<RemedialTest[]>([])
+  const [remedialLoading, setRemedialLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'self-analysis' | 'remedial'>('self-analysis')
   const [activeSubTab, setActiveSubTab] = useState<'brief' | 'listening' | 'reading' | 'writing' | 'question-wise'>('brief')
+
+  const fetchRemedialTests = async (mockTestId: string) => {
+    try {
+      setRemedialLoading(true)
+      const response = await fetch(`/api/student/remedial-tests/by-mock-test/${mockTestId}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        setRemedialTests(data.remedialTests || [])
+      } else {
+        console.error('Failed to fetch remedial tests:', response.status)
+      }
+    } catch (error) {
+      console.error('Error fetching remedial tests:', error)
+    } finally {
+      setRemedialLoading(false)
+    }
+  }
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -71,6 +108,11 @@ export default function TestResultsAnalysis({ testId }: TestResultsAnalysisProps
         if (response.ok) {
           const data = await response.json()
           setResults(data.results)
+          
+          // Extract mock test ID from the results and fetch remedial tests
+          if (data.results?.mockTestId) {
+            fetchRemedialTests(data.results.mockTestId)
+          }
         } else if (response.status === 202) {
           // Results not yet available
           const errorData = await response.json()
@@ -444,9 +486,83 @@ export default function TestResultsAnalysis({ testId }: TestResultsAnalysisProps
           )}
 
           {activeTab === 'remedial' && (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Remedial Tests</h3>
-              <p className="text-gray-600">Personalized remedial tests to improve your weak areas will be available here.</p>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Personalized Remedial Tests</h3>
+              <p className="text-gray-600 mb-6">Practice tests designed to help you improve your weak areas based on this mock test.</p>
+              
+              {remedialLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Loading remedial tests...</span>
+                </div>
+              ) : remedialTests.length > 0 ? (
+                <div className="space-y-4">
+                  {remedialTests.map((test) => (
+                    <div key={test.id} className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-lg font-medium text-gray-900 mb-2">{test.title}</h4>
+                          <p className="text-sm text-gray-600 mb-3">{test.description}</p>
+                          <div className="flex items-center space-x-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {test.module}
+                            </span>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {test.difficulty}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {test.duration} minutes
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {test.type.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch('/api/student/start-remedial-test-session', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({ remedialTestId: test.id }),
+                                })
+
+                                if (response.ok) {
+                                  const data = await response.json()
+                                  // Navigate to the existing test system using the generated token
+                                  window.location.href = `/test/${data.token}`
+                                } else {
+                                  const errorData = await response.json()
+                                  alert('Failed to start remedial test. Please try again.')
+                                }
+                              } catch (error) {
+                                console.error('Error starting remedial test:', error)
+                                alert('Network error. Please try again.')
+                              }
+                            }}
+                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                          >
+                            Start Test
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2z" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No remedial tests available</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    No remedial tests are currently linked to this mock test.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyJWT } from '@/lib/auth/jwt'
 import { prisma } from '@/lib/db'
-import jwt from 'jsonwebtoken'
 import { calculateAllModuleScores } from '@/lib/scoring/detailed-scorer'
 
 export async function GET(
@@ -21,9 +21,9 @@ export async function GET(
     }
 
     // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
+    const decoded = await verifyJWT(token)
 
-    if (decoded.role !== 'STUDENT') {
+    if (!decoded || decoded.role !== 'STUDENT') {
       return NextResponse.json(
         { error: 'Invalid user role' },
         { status: 403 }
@@ -166,6 +166,7 @@ export async function GET(
       }),
       candidateNumber: assignment.candidateNumber,
       studentName: assignment.student.name,
+      mockTestId: assignment.mock.id, // Add mock test ID for remedial tests
       bandScores: {
         listening: assignment.result.listeningBand || 0,
         reading: assignment.result.readingBand || 0,

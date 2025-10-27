@@ -11,10 +11,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify JWT token using the same method as other student APIs
-    const jwt = require('jsonwebtoken')
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
-    
-    if (decoded.role !== 'STUDENT') {
+    const decoded = await verifyJWT(token)
+    if (!decoded || decoded.role !== 'STUDENT') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

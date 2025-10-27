@@ -180,6 +180,16 @@ export default function StudentProtectedLayout({
                 Test History
               </Link>
               <Link 
+                href="/student/results" 
+                className={`px-4 py-3 text-sm font-medium transition-colors ${
+                  pathname?.startsWith('/student/results') 
+                    ? 'bg-[#4A8FB1] text-white' 
+                    : 'text-white hover:text-gray-200'
+                }`}
+              >
+                Results
+              </Link>
+              <Link 
                 href="/student/courses" 
                 className={`px-4 py-3 text-sm font-medium transition-colors ${
                   pathname?.startsWith('/student/courses') 
