@@ -12,19 +12,26 @@ interface AssignmentEmailData {
 }
 
 class EmailService {
-  private resend: Resend
+  private resend: Resend | null = null
 
   constructor() {
-    const apiKey = process.env.RESEND_API_KEY || ''
-    // Resend Node SDK defaults to the public base URL (https://api.resend.com)
-    // See: https://api.resend.com
-    this.resend = new Resend(apiKey)
+    // Initialize Resend lazily to avoid build-time errors
+  }
+
+  private getResend(): Resend {
+    if (!this.resend) {
+      const apiKey = process.env.RESEND_API_KEY || ''
+      // Resend Node SDK defaults to the public base URL (https://api.resend.com)
+      // See: https://api.resend.com
+      this.resend = new Resend(apiKey)
+    }
+    return this.resend
   }
 
   async sendAssignmentNotification(emailData: AssignmentEmailData): Promise<boolean> {
     try {
-
-      const { data: sendData, error } = await this.resend.emails.send({
+      const resend = this.getResend()
+      const { data: sendData, error } = await resend.emails.send({
         from: process.env.EMAIL_FROM || 'IELTS Mock Test <noreply@yourdomain.com>',
         to: emailData.studentEmail,
         subject: `New Mock Test Assignment: ${emailData.mockTitle}`,

@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { calculateAndStoreResults } from '../lib/scoring/result-calculator'
+import { calculateAndStoreResults } from '../src/lib/scoring/result-calculator'
 
 const prisma = new PrismaClient()
 
