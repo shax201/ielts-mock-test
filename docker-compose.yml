@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ielts-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ielts_mock_test
+      POSTGRES_USER: ielts_user
+      POSTGRES_PASSWORD: ielts_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - ielts-network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: ielts-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ielts-network
+
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ielts-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://ielts_user:ielts_password@postgres:5432/ielts_mock_test
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=your-nextauth-secret-change-this-in-production
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./public/uploads:/app/public/uploads
+    networks:
+      - ielts-network
+
+  # Database Migration Service
+  db-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ielts-db-migrate
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed"
+    environment:
+      - DATABASE_URL=postgresql://ielts_user:ielts_password@postgres:5432/ielts_mock_test
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+    depends_on:
+      - postgres
+    networks:
+      - ielts-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  ielts-network:
+    driver: bridge
